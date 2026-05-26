@@ -125,7 +125,7 @@ export const xiaolajiHandle: GroupHandler = async (ctx) => {
     case '晚安':
       await replyText(event, '晚安，小拉🐔也要睡觉去了哦')
       return true
-    case '/早安': {
+    case '早安': {
       const flag = randomIndex(5)
       try {
         await replyAudio(event, `audio/morning/${flag}.mp3`)

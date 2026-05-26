@@ -15,14 +15,20 @@ export function slashCommand(command: string): string {
   return command.startsWith('/') ? command : `/${command}`
 }
 
+/** 去掉消息开头的 / 命令前缀 */
+export function stripSlashPrefix(text: string): string {
+  const plain = extractPlainText(text)
+  return plain.startsWith('/') ? plain.slice(1) : plain
+}
+
 /** 消息是否包含带 / 的命令（如 @某人 /打飞你） */
 export function includesSlashCommand(msg: string, command: string): boolean {
   return extractPlainText(msg).includes(slashCommand(command))
 }
 
-/** 消息是否等于某命令（必须带 / 前缀） */
+/** 消息是否等于某命令（对比时忽略开头的 /） */
 export function matchCommand(msg: string, command: string): boolean {
-  return extractPlainText(msg) === slashCommand(command)
+  return stripSlashPrefix(msg) === stripSlashPrefix(command)
 }
 
 /** 从消息段中提取 @ 的用户 openid */

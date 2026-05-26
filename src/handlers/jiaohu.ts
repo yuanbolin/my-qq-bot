@@ -2,7 +2,7 @@ import { segment } from 'qq-official-bot'
 import { config } from '../config.js'
 import type { GroupHandler } from '../types/group.js'
 import { isOnCooldown } from '../utils/cooldown.js'
-import { extractAtUserIds, includesSlashCommand } from '../utils/message-parse.js'
+import { extractAtUserIds, stripSlashPrefix } from '../utils/message-parse.js'
 import { resolveAsset } from '../utils/assets.js'
 import { randomIndex } from '../utils/random.js'
 import { replyAtTextImage, replySendable, replyText } from '../utils/reply.js'
@@ -10,8 +10,9 @@ import { replyAtTextImage, replySendable, replyText } from '../utils/reply.js'
 type JiaohuTrigger = '放大招' | '打飞你'
 
 function getTrigger(msg: string): JiaohuTrigger | null {
-  if (includesKeyword(msg, '放大招')) return '放大招'
-  if (includesKeyword(msg, '打飞你')) return '打飞你'
+  const plain = stripSlashPrefix(msg)
+  if (plain.includes('放大招')) return '放大招'
+  if (plain.includes('打飞你')) return '打飞你'
   return null
 }
 
