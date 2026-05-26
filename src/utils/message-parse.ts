@@ -15,10 +15,16 @@ export function slashCommand(command: string): string {
   return command.startsWith('/') ? command : `/${command}`
 }
 
-/** 去掉消息开头的 / 命令前缀 */
+/** 去掉不可见前缀（QQ 斜杠指令可能在 / 前插入零宽字符） */
+function stripInvisiblePrefix(text: string): string {
+  return text.replace(/^[\u200B-\u200D\uFEFF\u00AD\u2060\s]+/, '')
+}
+
+/** 去掉消息开头的 / 命令前缀（兼容半角/全角/零宽字符） */
 export function stripSlashPrefix(text: string): string {
-  const plain = extractPlainText(text)
-  return plain.startsWith('/') ? plain.slice(1) : plain
+  let plain = stripInvisiblePrefix(extractPlainText(text))
+  plain = plain.replace(/^[/／∕⁄]+/, '')
+  return plain.trimStart()
 }
 
 /** 消息是否包含带 / 的命令（如 @某人 /打飞你） */
@@ -35,10 +41,9 @@ export function matchCommand(msg: string, command: string): boolean {
 
 /** 解析命令与参数（兼容已去掉 / 的消息），如 歌词 小宇 */
 export function parseCommandArgs(msg: string): { command: string; args: string } | null {
-  const plain = extractPlainText(msg).trim()
-  if (!plain) return null
+  const normalized = stripSlashPrefix(msg)
+  if (!normalized) return null
 
-  const normalized = plain.startsWith('/') ? plain.slice(1) : plain
   const spaceIndex = normalized.indexOf(' ')
   if (spaceIndex === -1) {
     return { command: normalized, args: '' }

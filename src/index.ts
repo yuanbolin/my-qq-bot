@@ -49,6 +49,7 @@ bot.on('message.group', async (event: GroupMessageEvent) => {
     groupName: event.group_name,
     userId: event.user_id,
     userName: event.sender.user_name,
+    rawMsg: event.raw_message,
     msg,
   })
 
