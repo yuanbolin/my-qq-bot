@@ -43,13 +43,14 @@ function createBot() {
 const bot = createBot() as Bot
 
 bot.on('message.group', async (event: GroupMessageEvent) => {
+  process.stdout.write(`message.group==>${JSON.stringify(event)}\n`)
   const msg = stripSlashPrefix(event.raw_message)
+  process.stdout.write(`msg==>${JSON.stringify(msg)}\n`)
   logger.info('收到群聊消息', {
     groupId: event.group_id,
     groupName: event.group_name,
     userId: event.user_id,
     userName: event.sender.user_name,
-    rawMsg: event.raw_message,
     msg,
   })
 
@@ -70,7 +71,7 @@ bot.on('message.group', async (event: GroupMessageEvent) => {
 })
 
 bot.on('message.private', async (event: PrivateMessageEvent) => {
-  console.log('message.private==>',JSON.stringify(event))
+  process.stdout.write(`message.private==>${JSON.stringify(event)}\n`)
   const text = stripSlashPrefix(event.raw_message)
   logger.info('收到私聊消息', {
     userId: event.user_id,
