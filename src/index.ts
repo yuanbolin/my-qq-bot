@@ -1,18 +1,20 @@
 import {
   Bot,
+  GroupActionNoticeEvent,
   GroupMessageEvent,
   Intent,
   PrivateMessageEvent,
   ReceiverMode,
 } from 'qq-official-bot'
 import { config } from './config.js'
+import { handleGroupInteraction } from './handlers/group-interaction.js'
 import { handleGroupMessage } from './handlers/group-router.js'
 import { handlePrivateMessage } from './handlers/private-router.js'
 import { stripSlashPrefix } from './utils/message-parse.js'
 import { logger } from './utils/logger.js'
 import { getStorageBackend, initStorage } from './utils/storage.js'
 
-const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
+const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT', 'INTERACTION']
 
 function createBot() {
   const base = {
@@ -42,10 +44,19 @@ function createBot() {
 
 const bot = createBot() as Bot
 
+bot.on('notice.group.action', async (event: GroupActionNoticeEvent) => {
+  try {
+    await handleGroupInteraction(bot, event)
+  } catch (error) {
+    logger.error('群聊互动处理失败', {
+      groupId: event.group_id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+})
+
 bot.on('message.group', async (event: GroupMessageEvent) => {
-  process.stdout.write(`message.group==>${JSON.stringify(event)}\n`)
   const msg = stripSlashPrefix(event.raw_message)
-  process.stdout.write(`msg==>${JSON.stringify(msg)}\n`)
   logger.info('收到群聊消息', {
     groupId: event.group_id,
     groupName: event.group_name,
@@ -71,7 +82,6 @@ bot.on('message.group', async (event: GroupMessageEvent) => {
 })
 
 bot.on('message.private', async (event: PrivateMessageEvent) => {
-  process.stdout.write(`message.private==>${JSON.stringify(event)}\n`)
   const text = stripSlashPrefix(event.raw_message)
   logger.info('收到私聊消息', {
     userId: event.user_id,

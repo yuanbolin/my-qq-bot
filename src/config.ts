@@ -14,6 +14,20 @@ function parseUserIds(value: string | undefined): string[] {
   return value.split(',').map((id) => id.trim()).filter(Boolean)
 }
 
+/** 指令面板 feature_id / button_id -> 命令名，如 abc123:早安,def456:帮助 */
+function parseCommandFeatures(value: string | undefined): Record<string, string> {
+  const map: Record<string, string> = {}
+  if (!value?.trim()) return map
+  for (const part of value.split(',')) {
+    const colon = part.indexOf(':')
+    if (colon <= 0) continue
+    const id = part.slice(0, colon).trim()
+    const cmd = part.slice(colon + 1).trim()
+    if (id && cmd) map[id] = cmd
+  }
+  return map
+}
+
 /** websocket：机器人主动连 QQ；webhook：QQ 向服务器 POST（需 nginx 反代） */
 export type BotMode = 'websocket' | 'webhook'
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
@@ -32,6 +46,8 @@ export const config = {
   /** 应用自身日志级别（与 qq-official-bot 的 LOG_LEVEL 独立） */
   appLogLevel: (process.env.APP_LOG_LEVEL ?? process.env.LOG_LEVEL ?? 'info') as LogLevel,
   redisUrl: process.env.REDIS_URL?.trim() || undefined,
+  /** 管理端指令面板 feature_id 映射，见 .env.example */
+  commandFeatures: parseCommandFeatures(process.env.COMMAND_FEATURES),
   userIds: {
     wulala: parseUserIds(process.env.USER_WULALA),
     /** 原 QQ 1252432332 */
