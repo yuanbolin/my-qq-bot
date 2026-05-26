@@ -1,7 +1,7 @@
 import { config } from '../config.js'
 import type { GroupContext, GroupHandler } from '../types/group.js'
 import { randomIndex } from '../utils/random.js'
-import { replyImage, replyText, replyTextImage } from '../utils/reply.js'
+import { replyAudio, replyImage, replyText, replyTextImage } from '../utils/reply.js'
 
 const JI_YONG_TEXT = `《🐔勇者》
 爱你黑色吊带装
@@ -125,9 +125,15 @@ export const xiaolajiHandle: GroupHandler = async (ctx) => {
     case '晚安':
       await replyText(event, '晚安，小拉🐔也要睡觉去了哦')
       return true
-    case '早安':
-      await replyText(event, '早安，小拉🐔也要起床了哦')
+    case '/早安': {
+      const flag = randomIndex(5)
+      try {
+        await replyAudio(event, `audio/morning/${flag}.mp3`)
+      } catch {
+        await replyText(event, '早安，小拉🐔也要起床了哦')
+      }
       return true
+    }
     default:
       return false
   }

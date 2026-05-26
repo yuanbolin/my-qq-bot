@@ -3,6 +3,8 @@ import { logger } from '../utils/logger.js'
 import { daijiaweiHandle } from './daijiawei.js'
 import { fangzhangHandle } from './fangzhang.js'
 import { messageMiscHandle } from './message-misc.js'
+import { jiaohuHandle } from './jiaohu.js'
+import { mlyGroupHandle } from './mly.js'
 import { xiaolajiHandle } from './xiaolaji.js'
 
 const handlers = [
@@ -10,6 +12,8 @@ const handlers = [
   { name: 'daijiawei', handle: daijiaweiHandle },
   { name: 'xiaolaji', handle: xiaolajiHandle },
   { name: 'message-misc', handle: messageMiscHandle },
+  { name: 'jiaohu', handle: jiaohuHandle },
+  { name: 'mly', handle: mlyGroupHandle },
 ]
 
 export async function handleGroupMessage(ctx: GroupContext): Promise<boolean> {

@@ -1,21 +1,34 @@
-import { segment } from 'qq-official-bot'
-import type { GroupMessageEvent } from 'qq-official-bot'
+import { segment, type Sendable } from 'qq-official-bot'
+import type { GroupMessageEvent, PrivateMessageEvent } from 'qq-official-bot'
 import {
   MEDIA_CONTENT_PLACEHOLDER,
   resolveAsset,
   resolveAudioAsset,
 } from './assets.js'
 
-export async function replyText(event: GroupMessageEvent, text: string) {
+export async function replySendable(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  message: Sendable,
+) {
+  await event.reply(message)
+}
+
+export async function replyText(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  text: string,
+) {
   await event.reply(segment.text(text))
 }
 
-export async function replyImage(event: GroupMessageEvent, imageRelativePath: string) {
+export async function replyImage(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  imageRelativePath: string,
+) {
   await event.reply(segment.image(resolveAsset(imageRelativePath)))
 }
 
 export async function replyTextImage(
-  event: GroupMessageEvent,
+  event: GroupMessageEvent | PrivateMessageEvent,
   text: string,
   imageRelativePath: string,
 ) {
@@ -26,36 +39,58 @@ export async function replyTextImage(
 }
 
 export async function replyAtText(
-  event: GroupMessageEvent,
+  event: GroupMessageEvent | PrivateMessageEvent,
   userId: string,
   text: string,
 ) {
   await event.reply([segment.at(userId), segment.text(text)])
 }
 
-/**
- * 发送群聊语音（富媒体 msg_type=7，file_type=3）
- * 注意：AudioControl 仅用于频道语音子频道播放，群聊应使用富媒体接口
- * @see https://bot.q.qq.com/wiki/develop/api-v2/server-inter/message/send-receive/rich-media.html
- */
 export async function replyAudio(
-  event: GroupMessageEvent,
+  event: GroupMessageEvent | PrivateMessageEvent,
   audioRelativePath: string,
 ) {
   const file = resolveAudioAsset(audioRelativePath)
-  // 群聊发送富媒体时 content 必填，且每条消息只能携带一个媒体文件
   await event.reply([
     segment.text(MEDIA_CONTENT_PLACEHOLDER),
     segment.audio(file),
   ])
 }
 
-/** 先发语音再发图片（与原 llonebot 两次 reply 行为一致） */
 export async function replyAudioImage(
-  event: GroupMessageEvent,
+  event: GroupMessageEvent | PrivateMessageEvent,
   audioRelativePath: string,
   imageRelativePath: string,
 ) {
   await replyAudio(event, audioRelativePath)
   await replyImage(event, imageRelativePath)
+}
+
+/** 按顺序拼接 @、文本、本地图片并发送 */
+export async function replyAtTextImage(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  atUserIds: string[],
+  text: string,
+  imageRelativePath: string,
+) {
+  const parts: Sendable[] = []
+  for (const id of atUserIds) {
+    parts.push(segment.at(id))
+  }
+  parts.push(segment.text(text), segment.image(resolveAsset(imageRelativePath)))
+  await event.reply(parts)
+}
+
+/** 按顺序拼接 @、文本并发送 */
+export async function replyAtListText(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  atUserIds: string[],
+  text: string,
+) {
+  const parts: Sendable[] = []
+  for (const id of atUserIds) {
+    parts.push(segment.at(id))
+  }
+  parts.push(segment.text(text))
+  await event.reply(parts)
 }

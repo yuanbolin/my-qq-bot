@@ -11,7 +11,7 @@ export const daijiaweiHandle: GroupHandler = async (ctx) => {
   const { msg, event } = ctx
 
   switch (msg) {
-    case '主播主播能不能编个弹幕': {
+    case '/主播编个弹幕吧': {
       const text = danmuList[randomIndex(55)] as string
       await replyText(event, `#歪比歪比#\n${text}`)
       return true
@@ -19,7 +19,7 @@ export const daijiaweiHandle: GroupHandler = async (ctx) => {
     case '戴佳伟的自我介绍':
       await replyTextImage(event, INTRO_TEXT, 'image/djw.png')
       return true
-    case '来点戴佳伟笑话': {
+    case '/来点戴佳伟笑话': {
       const text = jokesList[randomIndex(15)] as string
       await replyText(event, `#歪比歪比#\n        ${text}`)
       return true

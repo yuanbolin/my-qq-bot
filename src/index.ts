@@ -7,6 +7,7 @@ import {
 } from 'qq-official-bot'
 import { config } from './config.js'
 import { handleGroupMessage } from './handlers/group-router.js'
+import { handlePrivateMessage } from './handlers/private-router.js'
 import { logger } from './utils/logger.js'
 
 const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
@@ -38,28 +39,6 @@ function createBot() {
 }
 
 const bot = createBot() as Bot
-
-/** 私聊简单命令 */
-function handlePrivateCommand(text: string): string | null {
-  const content = text.trim()
-
-  if (content === 'ping') return 'pong'
-
-  if (content === 'help') {
-    return [
-      '可用命令：',
-      'ping - 测试连通性',
-      'help - 显示帮助',
-      'echo <内容> - 复读消息',
-    ].join('\n')
-  }
-
-  if (content.startsWith('echo ')) {
-    return content.slice(5).trim() || '请提供要复读的内容'
-  }
-
-  return null
-}
 
 bot.on('message.group', async (event: GroupMessageEvent) => {
   const msg = event.raw_message.trim()
@@ -96,13 +75,12 @@ bot.on('message.private', async (event: PrivateMessageEvent) => {
   })
 
   try {
-    const reply = handlePrivateCommand(text)
-    if (reply) {
-      await event.reply(reply)
-      logger.info('私聊已回复', { userId: event.user_id, msg: text })
-    } else {
-      logger.debug('私聊未匹配命令', { userId: event.user_id, msg: text })
-    }
+    await handlePrivateMessage({
+      event,
+      msg: text,
+      userId: event.user_id,
+      userName: event.sender.user_name,
+    })
   } catch (error) {
     logger.error('私聊消息处理失败', {
       userId: event.user_id,

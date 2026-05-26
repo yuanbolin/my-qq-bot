@@ -32,8 +32,17 @@ const required = [
   'image/zhenhaowan.png',
   'image/lipu.jpg',
   'image/miaopasi.png',
+  'image/dafeini.gif',
+  'image/dafeini.jpg',
+  ...Array.from({ length: 15 }, (_, i) => `image/lklxj/${i}.jpg`),
+  ...Array.from({ length: 3 }, (_, i) => `image/lklxj/hj/${i}.jpg`),
   // 语音：官方支持 mp3/wav/flac/silk（二选一即可）
   'audio/miaopasi.mp3',
+  'audio/morning/0.mp3',
+  'audio/morning/1.mp3',
+  'audio/morning/2.mp3',
+  'audio/morning/3.mp3',
+  'audio/morning/4.mp3',
 ]
 
 const missing = required.filter((rel) => !fs.existsSync(path.join(assetsDir, rel)))
