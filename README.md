@@ -94,6 +94,9 @@ tail -f logs/my-bot-$(date +%Y-%m-%d).log
 # 开机自启
 pm2 save
 pm2 startup            # 按提示执行生成的命令
+#重启与关闭
+npx pm2 restart my-bot
+npx pm2 stop my-bot
 ```
 
 常用运维命令：
