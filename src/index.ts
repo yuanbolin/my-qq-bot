@@ -6,6 +6,7 @@ import {
   ReceiverMode,
 } from 'qq-official-bot'
 import { config } from './config.js'
+import { handleGroupMessage } from './handlers/group-router.js'
 
 const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
 
@@ -35,16 +36,13 @@ function createBot() {
   })
 }
 
-// Bot 在两种 ReceiverMode 下 API 一致，此处统一类型便于注册事件
 const bot = createBot() as Bot
 
-/** 简单命令处理：ping / help */
-function handleCommand(text: string): string | null {
+/** 私聊简单命令 */
+function handlePrivateCommand(text: string): string | null {
   const content = text.trim()
 
-  if (content === 'ping') {
-    return 'pong'
-  }
+  if (content === 'ping') return 'pong'
 
   if (content === 'help') {
     return [
@@ -62,32 +60,28 @@ function handleCommand(text: string): string | null {
   return null
 }
 
-/** 监听群聊消息（群内需 @ 机器人） */
 bot.on('message.group', async (event: GroupMessageEvent) => {
-  const text = event.raw_message.trim()
-  console.log(`[群聊] ${event.group_name}(${event.group_id}) ${event.sender.user_name}: ${text}`)
+  const msg = event.raw_message.trim()
+  console.log(
+    `[群聊] ${event.group_name}(${event.group_id}) ${event.sender.user_name}: ${msg}`,
+  )
 
-  const reply = handleCommand(text)
-  if (reply) {
-    await event.reply(reply)
-    return
-  }
-
-  await event.reply(`收到群消息：${text}\n发送 help 查看命令`)
+  await handleGroupMessage({
+    event,
+    msg,
+    userId: event.user_id,
+    userName: event.sender.user_name,
+  })
 })
 
-/** 监听私聊消息 */
 bot.on('message.private', async (event: PrivateMessageEvent) => {
   const text = event.raw_message.trim()
   console.log(`[私聊] ${event.sender.user_name}(${event.user_id}): ${text}`)
 
-  const reply = handleCommand(text)
+  const reply = handlePrivateCommand(text)
   if (reply) {
     await event.reply(reply)
-    return
   }
-
-  await event.reply(`收到私聊消息：${text}\n发送 help 查看命令`)
 })
 
 export async function sendGroupMessage(groupId: string, content: string) {

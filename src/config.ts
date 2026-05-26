@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import path from 'node:path'
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim()
@@ -6,6 +7,11 @@ function requireEnv(name: string): string {
     throw new Error(`缺少环境变量 ${name}，请复制 .env.example 为 .env 并填写`)
   }
   return value
+}
+
+function parseUserIds(value: string | undefined): string[] {
+  if (!value?.trim()) return []
+  return value.split(',').map((id) => id.trim()).filter(Boolean)
 }
 
 /** websocket：机器人主动连 QQ；webhook：QQ 向服务器 POST（需 nginx 反代） */
@@ -23,8 +29,12 @@ export const config = {
     | 'error'
     | 'fatal',
   mode: (process.env.BOT_MODE ?? 'websocket') as BotMode,
-  /** Webhook 本地监听端口（仅 BOT_MODE=webhook 时生效） */
   webhookPort: Number(process.env.WEBHOOK_PORT ?? '3100'),
-  /** Webhook 路径，须与 nginx 反代后的路径一致 */
   webhookPath: process.env.WEBHOOK_PATH ?? '/webhook',
+  assetsDir: path.resolve(process.env.ASSETS_DIR ?? './assets'),
+  redisUrl: process.env.REDIS_URL?.trim() || undefined,
+  userIds: {
+    wulala: parseUserIds(process.env.USER_WULALA),
+    boss: parseUserIds(process.env.USER_BOSS),
+  },
 }

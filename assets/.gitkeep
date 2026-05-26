@@ -1,0 +1,2 @@
+# 从旧项目 node-mirai/image 与 node-mirai/audio 复制资源到此目录
+# 运行 npm run check-assets 检查必需文件
