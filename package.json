@@ -17,6 +17,7 @@
     "dotenv": "^17.4.2",
     "ioredis": "^5.10.1",
     "moment": "^2.30.1",
+    "pm2": "^7.0.1",
     "qq-official-bot": "^1.2.1"
   },
   "devDependencies": {
