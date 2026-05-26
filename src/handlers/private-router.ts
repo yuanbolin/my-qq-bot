@@ -1,6 +1,5 @@
 import type { PrivateContext } from '../types/private.js'
 import { logger } from '../utils/logger.js'
-import { mlyPrivateHandle } from './mly.js'
 
 function handleBasicCommand(text: string): string | null {
   const content = text.trim()
@@ -23,35 +22,12 @@ function handleBasicCommand(text: string): string | null {
   return null
 }
 
-const handlers = [{ name: 'mly', handle: mlyPrivateHandle }]
-
 export async function handlePrivateMessage(ctx: PrivateContext): Promise<boolean> {
   const basic = handleBasicCommand(ctx.msg)
   if (basic) {
     await ctx.event.reply(basic)
     logger.info('私聊已回复', { handler: 'basic', userId: ctx.userId, msg: ctx.msg })
     return true
-  }
-
-  for (const { name, handle } of handlers) {
-    try {
-      if (await handle(ctx)) {
-        logger.info('私聊已回复', {
-          handler: name,
-          userId: ctx.userId,
-          msg: ctx.msg,
-        })
-        return true
-      }
-    } catch (error) {
-      logger.error('私聊处理异常', {
-        handler: name,
-        userId: ctx.userId,
-        msg: ctx.msg,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      throw error
-    }
   }
 
   logger.debug('私聊未匹配', { userId: ctx.userId, msg: ctx.msg })

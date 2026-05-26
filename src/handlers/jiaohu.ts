@@ -7,7 +7,7 @@ import { resolveAsset } from '../utils/assets.js'
 import { randomIndex } from '../utils/random.js'
 import { replyAtTextImage, replySendable, replyText } from '../utils/reply.js'
 
-const TRIGGERS = ['/放大招', '/打飞你'] as const
+const TRIGGERS = ['放大招', '打飞你'] as const
 
 function includesTrigger(msg: string): (typeof TRIGGERS)[number] | null {
   for (const trigger of TRIGGERS) {

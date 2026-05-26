@@ -41,11 +41,4 @@ export const config = {
     /** 打飞你时受保护用户 openid（含 boss、bot 及原 487827081、2721553664） */
     protected: parseUserIds(process.env.USER_PROTECTED),
   },
-  mly: {
-    apiUrl: process.env.MLY_API_URL ?? 'https://api.mlyai.com/reply',
-    apiKey: process.env.MLY_API_KEY?.trim() ?? '',
-    apiSecret: process.env.MLY_API_SECRET?.trim() ?? '',
-    botName: process.env.MLY_BOT_NAME ?? '小拉鸡',
-    fileBaseUrl: process.env.MLY_FILE_BASE_URL ?? 'https://files.molicloud.com/',
-  },
 }
