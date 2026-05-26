@@ -8,6 +8,7 @@ import {
 import { config } from './config.js'
 import { handleGroupMessage } from './handlers/group-router.js'
 import { handlePrivateMessage } from './handlers/private-router.js'
+import { extractPlainText } from './utils/message-parse.js'
 import { logger } from './utils/logger.js'
 
 const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
@@ -41,7 +42,7 @@ function createBot() {
 const bot = createBot() as Bot
 
 bot.on('message.group', async (event: GroupMessageEvent) => {
-  const msg = event.raw_message.trim()
+  const msg = commandKey(event.raw_message.trim())
   logger.info('收到群聊消息', {
     groupId: event.group_id,
     groupName: event.group_name,

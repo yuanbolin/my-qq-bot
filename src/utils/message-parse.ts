@@ -2,6 +2,29 @@ import type { Sendable } from 'qq-official-bot'
 
 type MessageElem = Extract<Sendable, object>
 
+/** 去掉 raw_message 中的 at/reply 等段标记，得到可读文本 */
+export function extractPlainText(rawMessage: string): string {
+  return rawMessage
+    .replace(/<at,[^>]*>/gi, '')
+    .replace(/<reply,[^>]*>/gi, '')
+    .trim()
+}
+
+/** 确保命令以 / 开头 */
+export function slashCommand(command: string): string {
+  return command.startsWith('/') ? command : `/${command}`
+}
+
+/** 消息是否包含带 / 的命令（如 @某人 /打飞你） */
+export function includesSlashCommand(msg: string, command: string): boolean {
+  return extractPlainText(msg).includes(slashCommand(command))
+}
+
+/** 消息是否等于某命令（必须带 / 前缀） */
+export function matchCommand(msg: string, command: string): boolean {
+  return extractPlainText(msg) === slashCommand(command)
+}
+
 /** 从消息段中提取 @ 的用户 openid */
 export function extractAtUserIds(message: Sendable): string[] {
   const items = normalizeMessage(message)

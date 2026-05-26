@@ -1,4 +1,5 @@
 import type { GroupHandler } from '../types/group.js'
+import { matchCommand } from '../utils/message-parse.js'
 import { randomIndex } from '../utils/random.js'
 import { replyText, replyTextImage } from '../utils/reply.js'
 import danmuList from '../data/daijiawei-danmu.json'
@@ -10,21 +11,22 @@ LGD•SG•DAI•老干爹•帅哥戴•时代弄潮儿•巴黎时尚周专用
 export const daijiaweiHandle: GroupHandler = async (ctx) => {
   const { msg, event } = ctx
 
-  switch (msg) {
-    case '/主播编个弹幕吧': {
-      const text = danmuList[randomIndex(55)] as string
-      await replyText(event, `#歪比歪比#\n${text}`)
-      return true
-    }
-    case '戴佳伟的自我介绍':
-      await replyTextImage(event, INTRO_TEXT, 'image/djw.png')
-      return true
-    case '/来点戴佳伟笑话': {
-      const text = jokesList[randomIndex(15)] as string
-      await replyText(event, `#歪比歪比#\n        ${text}`)
-      return true
-    }
-    default:
-      return false
+  if (matchCommand(msg, '/主播编个弹幕吧')) {
+    const text = danmuList[randomIndex(55)] as string
+    await replyText(event, `#歪比歪比#\n${text}`)
+    return true
   }
+
+  if (matchCommand(msg, '戴佳伟的自我介绍')) {
+    await replyTextImage(event, INTRO_TEXT, 'image/djw.png')
+    return true
+  }
+
+  if (matchCommand(msg, '/来点戴佳伟笑话')) {
+    const text = jokesList[randomIndex(15)] as string
+    await replyText(event, `#歪比歪比#\n        ${text}`)
+    return true
+  }
+
+  return false
 }

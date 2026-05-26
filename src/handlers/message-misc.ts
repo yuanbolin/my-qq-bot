@@ -118,11 +118,12 @@ export const messageMiscHandle: GroupHandler = async (ctx) => {
       const gantan = GANTAN_ARR[randomIndex(GANTAN_ARR.length - 1)]
       return handleRenpin(ctx, gantan)
     }
-    case '/rp': {
+    case 'rp':
       if (await isOnCooldown(userId)) return true
-      const gantan = GANTAN_ARR[randomIndex(GANTAN_ARR.length - 1)]
-      return handleRenpin(ctx, gantan)
-    }
+      {
+        const gantan = GANTAN_ARR[randomIndex(GANTAN_ARR.length - 1)]
+        return handleRenpin(ctx, gantan)
+      }
     case '喵帕斯':
     case '喵帕斯～':
     case '喵帕斯~':

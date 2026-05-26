@@ -2,17 +2,16 @@ import { segment } from 'qq-official-bot'
 import { config } from '../config.js'
 import type { GroupHandler } from '../types/group.js'
 import { isOnCooldown } from '../utils/cooldown.js'
-import { extractAtUserIds } from '../utils/message-parse.js'
+import { extractAtUserIds, includesSlashCommand } from '../utils/message-parse.js'
 import { resolveAsset } from '../utils/assets.js'
 import { randomIndex } from '../utils/random.js'
 import { replyAtTextImage, replySendable, replyText } from '../utils/reply.js'
 
-const TRIGGERS = ['放大招', '打飞你'] as const
+type JiaohuTrigger = '放大招' | '打飞你'
 
-function includesTrigger(msg: string): (typeof TRIGGERS)[number] | null {
-  for (const trigger of TRIGGERS) {
-    if (msg.includes(trigger)) return trigger
-  }
+function getTrigger(msg: string): JiaohuTrigger | null {
+  if (includesKeyword(msg, '放大招')) return '放大招'
+  if (includesKeyword(msg, '打飞你')) return '打飞你'
   return null
 }
 
@@ -95,7 +94,7 @@ async function handleDaFeiNi(ctx: Parameters<GroupHandler>[0], atUserIds: string
 }
 
 export const jiaohuHandle: GroupHandler = async (ctx) => {
-  const trigger = includesTrigger(ctx.msg)
+  const trigger = getTrigger(ctx.msg)
   if (!trigger) return false
 
   const atUserIds = extractAtUserIds(ctx.event.message)
