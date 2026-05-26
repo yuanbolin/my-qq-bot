@@ -31,7 +31,23 @@ npm run dev
 | `QQ_APPID` | 机器人 App ID |
 | `QQ_SECRET` | 机器人 App Secret |
 | `QQ_SANDBOX` | 是否沙箱环境，默认 `true` |
-| `LOG_LEVEL` | 日志级别，默认 `info` |
+| `LOG_LEVEL` | SDK 日志级别，默认 `info` |
+| `APP_LOG_LEVEL` | 应用日志级别，默认与 `LOG_LEVEL` 相同 |
+| `LOG_DIR` | 应用日志目录，默认 `./logs`；设为空字符串关闭文件日志 |
+
+## 日志
+
+- 应用日志：`logs/my-bot-YYYY-MM-DD.log`（按天滚动，收消息、匹配 handler、错误等）
+- PM2 输出：`logs/pm2-out.log`、`logs/pm2-error.log`
+- 开发环境 `npm run dev` 同时输出到控制台
+
+```bash
+# 实时查看应用日志（Linux）
+tail -f logs/my-bot-$(date +%Y-%m-%d).log
+
+# PM2 日志
+npm run pm2:logs
+```
 
 ## 功能说明
 
@@ -50,6 +66,50 @@ npm run dev
 | `npm run dev` | 开发模式运行 |
 | `npm run build` | 编译 TypeScript |
 | `npm start` | 运行编译产物 |
+| `npm run pm2:start` | 编译并用 PM2 后台启动 |
+| `npm run pm2:restart` | 重新编译并重启 |
+| `npm run pm2:stop` | 停止进程 |
+| `npm run pm2:logs` | 查看 PM2 日志 |
+| `npm run pm2:status` | 查看运行状态 |
+
+## Linux 后台运行
+
+推荐使用 **PM2**（项目已内置依赖）：
+
+```bash
+cd /data/projects/my-bot
+npm ci
+cp .env.example .env   # 编辑填写凭证
+npm run pm2:start      # 编译 + 后台启动
+npm run pm2:status
+npm run pm2:logs
+
+# 开机自启
+pm2 save
+pm2 startup            # 按提示执行生成的命令
+```
+
+常用运维命令：
+
+```bash
+npm run pm2:restart    # 更新代码后重启
+npm run pm2:stop       # 停止
+pm2 delete my-bot      # 从 PM2 列表移除
+
+tail -f logs/my-bot-$(date +%Y-%m-%d).log
+tail -f logs/pm2-error.log
+```
+
+**备选：nohup**
+
+```bash
+npm run build
+mkdir -p logs
+nohup npm start >> logs/nohup.out 2>> logs/nohup.err &
+echo $! > logs/my-bot.pid
+tail -f logs/nohup.out
+kill $(cat logs/my-bot.pid)   # 停止
+```
 
 ## 服务器部署（配合 nginx）
 

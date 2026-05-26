@@ -16,22 +16,21 @@ function parseUserIds(value: string | undefined): string[] {
 
 /** websocket：机器人主动连 QQ；webhook：QQ 向服务器 POST（需 nginx 反代） */
 export type BotMode = 'websocket' | 'webhook'
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 
 export const config = {
   appid: requireEnv('QQ_APPID'),
   secret: requireEnv('QQ_SECRET'),
   sandbox: process.env.QQ_SANDBOX !== 'false',
-  logLevel: (process.env.LOG_LEVEL ?? 'info') as
-    | 'trace'
-    | 'debug'
-    | 'info'
-    | 'warn'
-    | 'error'
-    | 'fatal',
+  logLevel: (process.env.LOG_LEVEL ?? 'info') as LogLevel,
   mode: (process.env.BOT_MODE ?? 'websocket') as BotMode,
   webhookPort: Number(process.env.WEBHOOK_PORT ?? '3100'),
   webhookPath: process.env.WEBHOOK_PATH ?? '/webhook',
   assetsDir: path.resolve(process.env.ASSETS_DIR ?? './assets'),
+  /** 应用日志目录，默认 ./logs；设为空字符串可关闭文件日志 */
+  logDir: process.env.LOG_DIR === '' ? undefined : path.resolve(process.env.LOG_DIR ?? './logs'),
+  /** 应用自身日志级别（与 qq-official-bot 的 LOG_LEVEL 独立） */
+  appLogLevel: (process.env.APP_LOG_LEVEL ?? process.env.LOG_LEVEL ?? 'info') as LogLevel,
   redisUrl: process.env.REDIS_URL?.trim() || undefined,
   userIds: {
     wulala: parseUserIds(process.env.USER_WULALA),

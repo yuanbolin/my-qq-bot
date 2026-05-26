@@ -7,6 +7,7 @@ import {
 } from 'qq-official-bot'
 import { config } from './config.js'
 import { handleGroupMessage } from './handlers/group-router.js'
+import { logger } from './utils/logger.js'
 
 const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
 
@@ -62,25 +63,52 @@ function handlePrivateCommand(text: string): string | null {
 
 bot.on('message.group', async (event: GroupMessageEvent) => {
   const msg = event.raw_message.trim()
-  console.log(
-    `[群聊] ${event.group_name}(${event.group_id}) ${event.sender.user_name}: ${msg}`,
-  )
-
-  await handleGroupMessage({
-    event,
-    msg,
+  logger.info('收到群聊消息', {
+    groupId: event.group_id,
+    groupName: event.group_name,
     userId: event.user_id,
     userName: event.sender.user_name,
+    msg,
   })
+
+  try {
+    await handleGroupMessage({
+      event,
+      msg,
+      userId: event.user_id,
+      userName: event.sender.user_name,
+    })
+  } catch (error) {
+    logger.error('群聊消息处理失败', {
+      groupId: event.group_id,
+      msg,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
 })
 
 bot.on('message.private', async (event: PrivateMessageEvent) => {
   const text = event.raw_message.trim()
-  console.log(`[私聊] ${event.sender.user_name}(${event.user_id}): ${text}`)
+  logger.info('收到私聊消息', {
+    userId: event.user_id,
+    userName: event.sender.user_name,
+    msg: text,
+  })
 
-  const reply = handlePrivateCommand(text)
-  if (reply) {
-    await event.reply(reply)
+  try {
+    const reply = handlePrivateCommand(text)
+    if (reply) {
+      await event.reply(reply)
+      logger.info('私聊已回复', { userId: event.user_id, msg: text })
+    } else {
+      logger.debug('私聊未匹配命令', { userId: event.user_id, msg: text })
+    }
+  } catch (error) {
+    logger.error('私聊消息处理失败', {
+      userId: event.user_id,
+      msg: text,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 })
 
@@ -93,19 +121,27 @@ export async function sendPrivateMessage(userId: string, content: string) {
 }
 
 async function main() {
+  logger.info('正在启动 QQ 机器人', {
+    mode: config.mode,
+    sandbox: config.sandbox,
+    logDir: config.logDir ?? '(仅控制台)',
+    appLogLevel: config.appLogLevel,
+  })
+
   await bot.start()
 
   if (config.mode === 'webhook') {
-    console.log(
-      `QQ 机器人 Webhook 已启动：127.0.0.1:${config.webhookPort}${config.webhookPath}`,
-    )
-    console.log('请确保 nginx 已将公网 HTTPS 地址反代到上述路径')
+    logger.info('Webhook 模式已启动', {
+      url: `127.0.0.1:${config.webhookPort}${config.webhookPath}`,
+    })
   } else {
-    console.log('QQ 机器人 WebSocket 已连接，正在监听群聊与私聊消息...')
+    logger.info('WebSocket 模式已连接，正在监听群聊与私聊消息')
   }
 }
 
 main().catch((error: unknown) => {
-  console.error('启动失败：', error)
+  logger.error('启动失败', {
+    error: error instanceof Error ? error.message : String(error),
+  })
   process.exit(1)
 })
