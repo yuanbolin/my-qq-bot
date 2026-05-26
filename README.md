@@ -77,12 +77,19 @@ npm run pm2:logs
 推荐使用 **PM2**（项目已内置依赖）：
 
 ```bash
-cd /data/projects/my-bot
-npm ci
-cp .env.example .env   # 编辑填写凭证
-npm run pm2:start      # 编译 + 后台启动
-npm run pm2:status
-npm run pm2:logs
+# 确认有 ecosystem.config.cjs
+ls ecosystem.config.cjs
+
+# 编译并启动
+npm install
+npm run build
+mkdir -p logs
+npx pm2 start ecosystem.config.cjs
+
+# 查看状态与日志
+npx pm2 status
+npx pm2 logs my-bot
+tail -f logs/my-bot-$(date +%Y-%m-%d).log
 
 # 开机自启
 pm2 save
