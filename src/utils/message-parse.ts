@@ -26,9 +26,28 @@ export function includesSlashCommand(msg: string, command: string): boolean {
   return extractPlainText(msg).includes(slashCommand(command))
 }
 
-/** 消息是否等于某命令（对比时忽略开头的 /） */
+/** 消息是否等于某命令（对比时忽略开头的 /，大小写不敏感） */
 export function matchCommand(msg: string, command: string): boolean {
-  return stripSlashPrefix(msg) === stripSlashPrefix(command)
+  const lhs = stripSlashPrefix(msg).toLowerCase()
+  const rhs = stripSlashPrefix(command).toLowerCase()
+  return lhs === rhs
+}
+
+/** 解析命令与参数（兼容已去掉 / 的消息），如 歌词 小宇 */
+export function parseCommandArgs(msg: string): { command: string; args: string } | null {
+  const plain = extractPlainText(msg).trim()
+  if (!plain) return null
+
+  const normalized = plain.startsWith('/') ? plain.slice(1) : plain
+  const spaceIndex = normalized.indexOf(' ')
+  if (spaceIndex === -1) {
+    return { command: normalized, args: '' }
+  }
+
+  return {
+    command: normalized.slice(0, spaceIndex),
+    args: normalized.slice(spaceIndex + 1).trim(),
+  }
 }
 
 /** 从消息段中提取 @ 的用户 openid */

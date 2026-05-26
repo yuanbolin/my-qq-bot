@@ -94,3 +94,11 @@ export async function replyAtListText(
   parts.push(segment.text(text))
   await event.reply(parts)
 }
+
+/** 回复网络图片 URL */
+export async function replyImageUrl(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  imageUrl: string,
+) {
+  await event.reply(segment.image(imageUrl))
+}

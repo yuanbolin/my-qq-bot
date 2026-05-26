@@ -14,6 +14,8 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       out_file: path.join(__dirname, 'logs/pm2-out.log'),
       error_file: path.join(__dirname, 'logs/pm2-error.log'),
+      // 与 dotenv 互补：确保 PM2 进程能读到服务器上的 .env
+      env_file: path.join(__dirname, '.env'),
       env: {
         NODE_ENV: 'production',
       },

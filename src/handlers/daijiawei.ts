@@ -11,7 +11,7 @@ LGD•SG•DAI•老干爹•帅哥戴•时代弄潮儿•巴黎时尚周专用
 export const daijiaweiHandle: GroupHandler = async (ctx) => {
   const { msg, event } = ctx
 
-  if (matchCommand(msg, '/主播编个弹幕吧')) {
+  if (matchCommand(msg, '主播编个弹幕吧')) {
     const text = danmuList[randomIndex(55)] as string
     await replyText(event, `#歪比歪比#\n${text}`)
     return true
@@ -22,7 +22,7 @@ export const daijiaweiHandle: GroupHandler = async (ctx) => {
     return true
   }
 
-  if (matchCommand(msg, '/来点戴佳伟笑话')) {
+  if (matchCommand(msg, '来点戴佳伟笑话')) {
     const text = jokesList[randomIndex(15)] as string
     await replyText(event, `#歪比歪比#\n        ${text}`)
     return true

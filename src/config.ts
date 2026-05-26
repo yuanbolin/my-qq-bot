@@ -41,4 +41,10 @@ export const config = {
     /** 打飞你时受保护用户 openid（含 boss、bot 及原 487827081、2721553664） */
     protected: parseUserIds(process.env.USER_PROTECTED),
   },
+  /** 60s API：https://docs.60s-api.viki.moe */
+  sixtyApi: {
+    baseUrl: process.env.SIXTY_API_BASE_URL?.trim() || 'https://60s.viki.moe',
+    timeoutMs: Number(process.env.SIXTY_API_TIMEOUT_MS ?? '15000'),
+    maxTextLength: Number(process.env.SIXTY_API_MAX_TEXT_LENGTH ?? '3500'),
+  },
 }

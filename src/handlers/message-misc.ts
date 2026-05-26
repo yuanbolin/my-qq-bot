@@ -9,6 +9,7 @@ import {
   replyText,
   replyTextImage,
 } from '../utils/reply.js'
+import { logger } from '../utils/logger.js'
 import { getStorage, setStorage } from '../utils/storage.js'
 
 const GANTAN_ARR = ['哈哈', '唉呀', '啊', '哼', '呸', '哎哟', '咳', '哦', '喂', '嗯', '哎']
@@ -35,34 +36,59 @@ function rollRenpinNum(): number {
   return num
 }
 
-async function handleRenpin(
+/** 距离当天结束剩余秒数，用于 Redis 自动过期 */
+function secondsUntilEndOfDay(): number {
+  return moment().endOf('day').diff(moment(), 'seconds') + 1
+}
+
+async function replyRenpin(
   ctx: Parameters<GroupHandler>[0],
   gantan: string,
-): Promise<boolean> {
-  const { event, userId } = ctx
-  const stored = await getStorage(`${userId}renpin`)
-
-  if (stored) {
-    const obj = JSON.parse(stored) as { num: number; date: string }
-    const date = moment().format('YYYY-MM-DD')
-    if (obj.date === date) {
-      const flag = renpinFlag(obj.num)
-      await replyText(event, `${gantan},你今天的人品是${obj.num}(${flag})`)
-      if (flag === '寄') {
-        await replyImage(event, 'image/ji1.jpg')
-      }
-      return true
-    }
-  }
-
-  const num = rollRenpinNum()
+  num: number,
+): Promise<void> {
+  const { event } = ctx
   const flag = renpinFlag(num)
-  const date = moment().format('YYYY-MM-DD')
   await replyText(event, `${gantan},你今天的人品是${num}(${flag})`)
   if (flag === '寄') {
     await replyImage(event, 'image/ji1.jpg')
   }
-  await setStorage(`${userId}renpin`, JSON.stringify({ num, date }))
+}
+
+async function handleRenpin(
+  ctx: Parameters<GroupHandler>[0],
+  gantan: string,
+): Promise<boolean> {
+  const { userId } = ctx
+  const key = `${userId}renpin`
+  const date = moment().format('YYYY-MM-DD')
+  const stored = await getStorage(key)
+
+  if (stored) {
+    try {
+      const obj = JSON.parse(stored) as { num: number; date: string }
+      if (obj.date === date) {
+        logger.debug('人品缓存命中', { userId, num: obj.num, date })
+        await replyRenpin(ctx, gantan, obj.num)
+        return true
+      }
+      logger.debug('人品缓存已过期', { userId, storedDate: obj.date, today: date })
+    } catch (error) {
+      logger.warn('人品缓存数据损坏，将重新抽取', {
+        userId,
+        stored,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  } else {
+    logger.debug('人品缓存未命中', { userId, date })
+  }
+
+  const num = rollRenpinNum()
+  const payload = JSON.stringify({ num, date })
+  // 先写入缓存，避免回复消息失败导致下次重新抽取
+  await setStorage(key, payload, { ttlSeconds: secondsUntilEndOfDay() })
+  logger.debug('人品已写入缓存', { userId, num, date })
+  await replyRenpin(ctx, gantan, num)
   return true
 }
 

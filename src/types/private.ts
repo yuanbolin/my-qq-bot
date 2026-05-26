@@ -6,3 +6,5 @@ export interface PrivateContext {
   userId: string
   userName: string
 }
+
+export type PrivateHandler = (ctx: PrivateContext) => Promise<boolean>

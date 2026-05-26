@@ -10,6 +10,7 @@ import { handleGroupMessage } from './handlers/group-router.js'
 import { handlePrivateMessage } from './handlers/private-router.js'
 import { stripSlashPrefix } from './utils/message-parse.js'
 import { logger } from './utils/logger.js'
+import { getStorageBackend, initStorage } from './utils/storage.js'
 
 const INTENTS: Intent[] = ['GROUP_AND_C2C_EVENT']
 
@@ -68,7 +69,8 @@ bot.on('message.group', async (event: GroupMessageEvent) => {
 })
 
 bot.on('message.private', async (event: PrivateMessageEvent) => {
-  const text = event.raw_message.trim()
+  console.log('message.private==>',JSON.stringify(event))
+  const text = stripSlashPrefix(event.raw_message)
   logger.info('收到私聊消息', {
     userId: event.user_id,
     userName: event.sender.user_name,
@@ -106,6 +108,9 @@ async function main() {
     logDir: config.logDir ?? '(仅控制台)',
     appLogLevel: config.appLogLevel,
   })
+
+  await initStorage()
+  logger.info('存储后端', { backend: getStorageBackend() })
 
   await bot.start()
 
