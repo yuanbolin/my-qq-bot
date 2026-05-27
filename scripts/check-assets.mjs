@@ -43,6 +43,8 @@ const required = [
   'audio/morning/2.mp3',
   'audio/morning/3.mp3',
   'audio/morning/4.mp3',
+  // 今日小猪（rollpig）图片示例：至少放一张用于验证目录结构
+  'image/rollpig/pig.png',
 ]
 
 const missing = required.filter((rel) => !fs.existsSync(path.join(assetsDir, rel)))

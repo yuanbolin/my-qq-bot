@@ -6,6 +6,7 @@ import { messageMiscHandle } from './message-misc.js'
 import { jiaohuHandle } from './jiaohu.js'
 import { sixtyApiGroupHandle } from './sixty-api.js'
 import { xiaolajiHandle } from './xiaolaji.js'
+import { rollpigHandle } from './rollpig.js'
 
 const handlers = [
   { name: 'fangzhang', handle: fangzhangHandle },
@@ -14,6 +15,7 @@ const handlers = [
   { name: 'message-misc', handle: messageMiscHandle },
   { name: 'jiaohu', handle: jiaohuHandle },
   { name: 'sixty-api', handle: sixtyApiGroupHandle },
+  { name: 'rollpig', handle: rollpigHandle },
 ]
 
 export async function handleGroupMessage(ctx: GroupContext): Promise<boolean> {
