@@ -48,6 +48,53 @@ interface LyricData {
   formatted: string
 }
 
+interface HotItem {
+  title: string
+  hot_value?: number
+  link?: string
+}
+
+interface EpicGameItem {
+  title: string
+  cover?: string
+  original_price_desc: string
+  description?: string
+  seller?: string
+  is_free_now?: boolean
+  free_start?: string
+  free_end?: string
+  link?: string
+}
+
+interface BingWallpaperData {
+  title?: string
+  headline?: string
+  description?: string
+  main_text?: string
+  cover: string
+  cover_4k?: string
+  copyright?: string
+  update_date?: string
+}
+
+interface KfcData {
+  index: number
+  kfc: string
+}
+
+interface LuckData {
+  luck_desc: string
+  luck_rank: number
+  luck_tip: string
+}
+
+interface FabingData {
+  index: number
+  saying: string
+}
+
+const HOT_LIST_LIMIT = 15
+
 const EVENT_TYPE_LABEL: Record<string, string> = {
   birth: '出生',
   death: '逝世',
@@ -147,6 +194,59 @@ function formatLyric(data: LyricData): string {
   return truncateText(`${header}\n${data.formatted}`)
 }
 
+function formatHotList(title: string, items: HotItem[], limit = HOT_LIST_LIMIT): string {
+  const body = items
+    .slice(0, limit)
+    .map((item, index) => {
+      const heat =
+        item.hot_value !== undefined ? ` (${item.hot_value.toLocaleString()})` : ''
+      return `${index + 1}. ${item.title}${heat}`
+    })
+    .join('\n')
+  return truncateText(`${title}\n\n${body}`)
+}
+
+async function fetchHotList(path: string, title: string): Promise<string> {
+  try {
+    const data = await fetchJson<HotItem[]>(path)
+    return formatHotList(title, data)
+  } catch (error) {
+    logger.warn(`${title} JSON 获取失败，降级 text`, {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return truncateText(await fetchText(path))
+  }
+}
+
+function formatEpicGames(games: EpicGameItem[]): string {
+  const body = games
+    .map((game, index) => {
+      const period =
+        game.free_start && game.free_end
+          ? `\n免费：${game.free_start} ~ ${game.free_end}`
+          : ''
+      const link = game.link ? `\n${game.link}` : ''
+      return `${index + 1}. ${game.title}\n原价：${game.original_price_desc}${period}${link}`
+    })
+    .join('\n\n')
+  return truncateText(`🎮 Epic 每周免费游戏\n\n${body}`)
+}
+
+function formatBingWallpaper(data: BingWallpaperData): { text: string; imageUrl?: string } {
+  const lines = [
+    '🖼️ 必应每日壁纸',
+    data.headline || data.title,
+    data.description,
+    data.copyright ? `© ${data.copyright}` : undefined,
+    data.update_date ? `更新：${data.update_date}` : undefined,
+  ].filter(Boolean)
+
+  return {
+    text: truncateText(lines.join('\n')),
+    imageUrl: data.cover_4k || data.cover,
+  }
+}
+
 export async function getSixtyNews(): Promise<{ text: string; imageUrl?: string }> {
   try {
     const data = await fetchJson<SixtyNewsData>('/v2/60s')
@@ -201,5 +301,83 @@ export async function searchLyric(query: string): Promise<string> {
       error: error instanceof Error ? error.message : String(error),
     })
     return truncateText(await fetchText('/v2/lyric', { query: keyword, clean: 'false' }))
+  }
+}
+
+export async function getEpicGames(): Promise<string> {
+  try {
+    const data = await fetchJson<EpicGameItem[]>('/v2/epic')
+    if (!data.length) {
+      return '🎮 Epic 每周免费游戏\n\n本周暂无免费游戏信息。'
+    }
+    return formatEpicGames(data)
+  } catch (error) {
+    logger.warn('Epic JSON 获取失败，降级 text', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return truncateText(await fetchText('/v2/epic'))
+  }
+}
+
+export async function getBingWallpaper(): Promise<{ text: string; imageUrl?: string }> {
+  try {
+    const data = await fetchJson<BingWallpaperData>('/v2/bing')
+    return formatBingWallpaper(data)
+  } catch (error) {
+    logger.warn('必应壁纸 JSON 获取失败，降级 text', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return { text: truncateText(await fetchText('/v2/bing')) }
+  }
+}
+
+export async function getDouyinHot(): Promise<string> {
+  return fetchHotList('/v2/douyin', '🔥 抖音热搜')
+}
+
+export async function getWeiboHot(): Promise<string> {
+  return fetchHotList('/v2/weibo', '🔥 微博热搜')
+}
+
+export async function getDongchediHot(): Promise<string> {
+  return fetchHotList('/v2/dongchedi', '🔥 懂车帝热搜')
+}
+
+export async function getKfcCopy(): Promise<string> {
+  try {
+    const data = await fetchJson<KfcData>('/v2/kfc')
+    return truncateText(`🍗 随机 KFC 文案\n\n${data.kfc}`)
+  } catch (error) {
+    logger.warn('KFC JSON 获取失败，降级 text', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return truncateText(await fetchText('/v2/kfc'))
+  }
+}
+
+export async function getRandomLuck(): Promise<string> {
+  try {
+    const data = await fetchJson<LuckData>('/v2/luck')
+    return truncateText(
+      `🔮 随机运势\n\n${data.luck_desc}\n运势指数：${data.luck_rank}\n\n💡 ${data.luck_tip}`,
+    )
+  } catch (error) {
+    logger.warn('运势 JSON 获取失败，降级 text', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return truncateText(await fetchText('/v2/luck'))
+  }
+}
+
+export async function getFabingText(name?: string): Promise<string> {
+  const params = name ? { name } : {}
+  try {
+    const data = await fetchJson<FabingData>('/v2/fabing', params)
+    return truncateText(`📝 随机发病文学\n\n${data.saying}`)
+  } catch (error) {
+    logger.warn('发病文学 JSON 获取失败，降级 text', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return truncateText(await fetchText('/v2/fabing', params))
   }
 }
