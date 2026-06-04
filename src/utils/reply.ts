@@ -106,6 +106,30 @@ export async function replyImageUrl(
   await event.reply(segment.image(imageUrl))
 }
 
+/** 发送 GIF（写入临时文件后发送） */
+export async function replyGif(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  gifBuffer: Buffer,
+  text?: string,
+) {
+  const tmpPath = path.join(
+    os.tmpdir(),
+    `gif-${Date.now()}-${Math.random().toString(36).slice(2)}.gif`,
+  )
+  await fs.writeFile(tmpPath, gifBuffer)
+
+  try {
+    const parts: Sendable[] = []
+    if (text) {
+      parts.push(segment.text(text))
+    }
+    parts.push(segment.image(tmpPath))
+    await event.reply(parts)
+  } finally {
+    await fs.unlink(tmpPath).catch(() => undefined)
+  }
+}
+
 /** @ 用户并发送 GIF（写入临时文件后发送） */
 export async function replyAtGif(
   event: GroupMessageEvent | PrivateMessageEvent,

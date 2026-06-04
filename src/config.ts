@@ -85,4 +85,18 @@ export const config = {
     timeoutMs: Number(process.env.SIXTY_API_TIMEOUT_MS ?? '15000'),
     maxTextLength: Number(process.env.SIXTY_API_MAX_TEXT_LENGTH ?? '3500'),
   },
+  /** node-sorry 表情包：https://github.com/q809198545/node-sorry */
+  sorry: {
+    ffmpegPath: process.env.SORRY_FFMPEG_PATH?.trim() || 'ffmpeg',
+    templatesDir: path.join(
+      path.resolve(process.env.ASSETS_DIR ?? './assets'),
+      'sorry/templates',
+    ),
+    cacheDir: process.env.SORRY_CACHE_DIR?.trim()
+      ? path.resolve(process.env.SORRY_CACHE_DIR)
+      : path.join(path.resolve(process.env.ASSETS_DIR ?? './assets'), 'sorry/cache'),
+    scaleWidth: Number(process.env.SORRY_SCALE_WIDTH ?? '300'),
+    fps: Number(process.env.SORRY_FFMPEG_FPS ?? '8'),
+    timeoutMs: Number(process.env.SORRY_FFMPEG_TIMEOUT_MS ?? '60000'),
+  },
 }

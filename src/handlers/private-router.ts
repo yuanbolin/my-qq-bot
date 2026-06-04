@@ -2,6 +2,7 @@ import type { PrivateContext } from '../types/private.js'
 import { stripSlashPrefix } from '../utils/message-parse.js'
 import { logger } from '../utils/logger.js'
 import { sixtyApiPrivateHandle } from './sixty-api.js'
+import { sorryPrivateHandle } from './sorry.js'
 
 function handleBasicCommand(text: string): string | null {
   const content = text.trim()
@@ -27,6 +28,9 @@ function handleBasicCommand(text: string): string | null {
       '/kfc - 随机 KFC 文案',
       '/运势 - 随机运势',
       '/发病文学 [名字] - 随机发病文学',
+      '/sorry 或 /为所欲为 - 生成「有钱真的可以为所欲为」GIF',
+      '/王境泽 或 /真香 - 王境泽表情包',
+      '/sorry帮助 - 表情包命令说明',
     ].join('\n')
   }
 
@@ -37,7 +41,10 @@ function handleBasicCommand(text: string): string | null {
   return null
 }
 
-const handlers = [{ name: 'sixty-api', handle: sixtyApiPrivateHandle }]
+const handlers = [
+  { name: 'sixty-api', handle: sixtyApiPrivateHandle },
+  { name: 'sorry', handle: sorryPrivateHandle },
+]
 
 export async function handlePrivateMessage(ctx: PrivateContext): Promise<boolean> {
   const msg = stripSlashPrefix(ctx.msg.trim())

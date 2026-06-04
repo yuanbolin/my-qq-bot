@@ -8,6 +8,7 @@ import { sixtyApiGroupHandle } from './sixty-api.js'
 import { xiaolajiHandle } from './xiaolaji.js'
 import { petpetHandle } from './petpet.js'
 import { rollpigHandle } from './rollpig.js'
+import { sorryHandle } from './sorry.js'
 
 const handlers = [
   { name: 'fangzhang', handle: fangzhangHandle },
@@ -18,6 +19,7 @@ const handlers = [
   { name: 'petpet', handle: petpetHandle },
   { name: 'sixty-api', handle: sixtyApiGroupHandle },
   { name: 'rollpig', handle: rollpigHandle },
+  { name: 'sorry', handle: sorryHandle },
 ]
 
 export async function handleGroupMessage(ctx: GroupContext): Promise<boolean> {
