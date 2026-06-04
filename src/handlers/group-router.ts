@@ -6,6 +6,7 @@ import { messageMiscHandle } from './message-misc.js'
 import { jiaohuHandle } from './jiaohu.js'
 import { sixtyApiGroupHandle } from './sixty-api.js'
 import { xiaolajiHandle } from './xiaolaji.js'
+import { petpetHandle } from './petpet.js'
 import { rollpigHandle } from './rollpig.js'
 
 const handlers = [
@@ -14,6 +15,7 @@ const handlers = [
   { name: 'xiaolaji', handle: xiaolajiHandle },
   { name: 'message-misc', handle: messageMiscHandle },
   { name: 'jiaohu', handle: jiaohuHandle },
+  { name: 'petpet', handle: petpetHandle },
   { name: 'sixty-api', handle: sixtyApiGroupHandle },
   { name: 'rollpig', handle: rollpigHandle },
 ]

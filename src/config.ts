@@ -28,6 +28,21 @@ function parseCommandFeatures(value: string | undefined): Record<string, string>
   return map
 }
 
+function parseOpenidQqMap(value: string | undefined): Record<string, string> {
+  const map: Record<string, string> = {}
+  if (!value?.trim()) return map
+  for (const part of value.split(',')) {
+    const eq = part.indexOf('=')
+    if (eq <= 0) continue
+    const openid = part.slice(0, eq).trim()
+    const qq = part.slice(eq + 1).trim()
+    if (openid && /^\d{5,11}$/.test(qq)) {
+      map[openid] = qq
+    }
+  }
+  return map
+}
+
 /** websocket：机器人主动连 QQ；webhook：QQ 向服务器 POST（需 nginx 反代） */
 export type BotMode = 'websocket' | 'webhook'
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
@@ -48,6 +63,13 @@ export const config = {
   redisUrl: process.env.REDIS_URL?.trim() || undefined,
   /** 管理端指令面板 feature_id 映射，见 .env.example */
   commandFeatures: parseCommandFeatures(process.env.COMMAND_FEATURES),
+  /** openid -> QQ 号，用于摸头等需要数字 QQ 的功能 */
+  openidQqMap: parseOpenidQqMap(process.env.OPENID_QQ_MAP),
+  oick: {
+    apiUrl: process.env.OICK_QQTX_URL?.trim() || 'https://api.oick.cn/api/qqtx',
+    apiKey: process.env.OICK_API_KEY?.trim() || '',
+    timeoutMs: Number(process.env.OICK_API_TIMEOUT_MS ?? '10000'),
+  },
   userIds: {
     wulala: parseUserIds(process.env.USER_WULALA),
     /** 原 QQ 1252432332 */
