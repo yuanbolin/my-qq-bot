@@ -55,10 +55,6 @@ async function processSorry(ctx: SorryCtx): Promise<boolean> {
     return false
   }
 
-  if (parsed.args === '帮助' || parsed.args.toLowerCase() === 'help') {
-    await replyText(ctx.event, buildHelpText())
-    return true
-  }
 
   if (await isOnCooldown(ctx.userId, 'sorry')) {
     await replyText(ctx.event, '表情包生成冷却中，请稍后再试~')
