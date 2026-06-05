@@ -89,6 +89,13 @@ export const config = {
     timeoutMs: Number(process.env.SIXTY_API_TIMEOUT_MS ?? '15000'),
     maxTextLength: Number(process.env.SIXTY_API_MAX_TEXT_LENGTH ?? '3500'),
   },
+  /** 随机梗图 API：https://meme-api.com/gimme */
+  meme: {
+    apiUrl: process.env.MEME_API_URL?.trim() || 'https://meme-api.com/gimme',
+    timeoutMs: Number(process.env.MEME_API_TIMEOUT_MS ?? '10000'),
+    /** 输出的 preview 图片数量上限 */
+    previewLimit: Number(process.env.MEME_PREVIEW_LIMIT ?? '3'),
+  },
   /** node-sorry 表情包：https://github.com/q809198545/node-sorry */
   sorry: {
     ffmpegPath: process.env.SORRY_FFMPEG_PATH?.trim() || 'ffmpeg',

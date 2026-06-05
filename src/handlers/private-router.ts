@@ -1,6 +1,7 @@
 import type { PrivateContext } from '../types/private.js'
 import { stripSlashPrefix } from '../utils/message-parse.js'
 import { logger } from '../utils/logger.js'
+import { memePrivateHandle } from './meme.js'
 import { oickFunPrivateHandle } from './oick-fun.js'
 import { sixtyApiPrivateHandle } from './sixty-api.js'
 import { sorryPrivateHandle } from './sorry.js'
@@ -31,6 +32,7 @@ function handleBasicCommand(text: string): string | null {
       '/发病文学 [名字] - 随机发病文学',
       '舔狗日记 - 随机舔狗日记',
       'Bing每日图 - Bing 每日背景图',
+      '随机梗图 - 随机 reddit 梗图（多张预览）',
       '/sorry 或 /为所欲为 - 生成「有钱真的可以为所欲为」GIF',
       '/王境泽 或 /真香 - 王境泽表情包',
       '/sorry帮助 - 表情包命令说明',
@@ -47,6 +49,7 @@ function handleBasicCommand(text: string): string | null {
 const handlers = [
   { name: 'sixty-api', handle: sixtyApiPrivateHandle },
   { name: 'oick-fun', handle: oickFunPrivateHandle },
+  { name: 'meme', handle: memePrivateHandle },
   { name: 'sorry', handle: sorryPrivateHandle },
 ]
 
