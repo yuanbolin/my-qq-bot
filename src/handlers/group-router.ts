@@ -4,6 +4,7 @@ import { daijiaweiHandle } from './daijiawei.js'
 import { fangzhangHandle } from './fangzhang.js'
 import { messageMiscHandle } from './message-misc.js'
 import { jiaohuHandle } from './jiaohu.js'
+import { oickFunGroupHandle } from './oick-fun.js'
 import { sixtyApiGroupHandle } from './sixty-api.js'
 import { xiaolajiHandle } from './xiaolaji.js'
 import { petpetHandle } from './petpet.js'
@@ -18,6 +19,7 @@ const handlers = [
   { name: 'jiaohu', handle: jiaohuHandle },
   { name: 'petpet', handle: petpetHandle },
   { name: 'sixty-api', handle: sixtyApiGroupHandle },
+  { name: 'oick-fun', handle: oickFunGroupHandle },
   { name: 'rollpig', handle: rollpigHandle },
   { name: 'sorry', handle: sorryHandle },
 ]

@@ -67,6 +67,10 @@ export const config = {
   openidQqMap: parseOpenidQqMap(process.env.OPENID_QQ_MAP),
   oick: {
     apiUrl: process.env.OICK_QQTX_URL?.trim() || 'https://api.oick.cn/api/qqtx',
+    /** 舔狗日记 API（https://api.oick.cn/doc/dog，需 apikey） */
+    dogUrl: process.env.OICK_DOG_URL?.trim() || 'https://api.oick.cn/api/dog',
+    /** Bing 每日图 API（https://api.oick.cn/doc/bing，重定向到图片） */
+    bingUrl: process.env.OICK_BING_URL?.trim() || 'https://api.oick.cn/api/bing',
     apiKey: process.env.OICK_API_KEY?.trim() || '',
     timeoutMs: Number(process.env.OICK_API_TIMEOUT_MS ?? '10000'),
   },
