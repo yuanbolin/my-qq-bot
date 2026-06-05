@@ -11,11 +11,10 @@ function handleBasicCommand(text: string): string | null {
 
   if (content === 'ping') return 'pong'
 
-  if (content === 'help') {
+  if (content === '帮助') {
     return [
       '可用命令：',
       'ping - 测试连通性',
-      'help - 显示帮助',
       'echo <内容> - 复读消息',
       '/60s - 每天 60 秒读懂世界',
       '/ai资讯 - AI 资讯快报',
