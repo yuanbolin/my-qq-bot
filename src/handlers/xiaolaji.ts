@@ -102,12 +102,6 @@ export const xiaolajiHandle: GroupHandler = async (ctx) => {
     case "孤勇者":
       await replyText(event, JI_YONG_TEXT);
       return true;
-    case "帮助":
-      await replyImage(event, "image/help.png");
-      return true;
-    case "help":
-      await replyImage(event, "image/help.png");
-      return true;
     case "小垃机都能干啥子哦":
       await replyText(
         event,
