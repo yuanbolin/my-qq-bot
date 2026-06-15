@@ -38,66 +38,6 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
     return str(files[0]) if files else None
 
 
-def optimize_long_img_for_qq(png_path: str, job_dir: Path) -> list[str]:
-    """将 PNG 长图转为 JPEG 并切片，适配 QQ 群聊约 10MB/张、单边 ≤32767 像素限制。"""
-    # 留余量，避免边界触发 850031
-    max_bytes = 9 * 1024 * 1024
-    max_height = 30_000
-
-    try:
-        from PIL import Image
-    except ImportError:
-        return [png_path]
-
-    img = Image.open(png_path).convert("RGB")
-    width, height = img.size
-
-    # 宽度过大时先等比缩小，降低单张体积
-    if width > 1600:
-        scale = 1600 / width
-        resample = getattr(Image, 'Resampling', Image).LANCZOS
-        img = img.resize((1600, max(1, int(height * scale))), resample)
-        width, height = img.size
-
-    pending: list = [img]
-    result_paths: list[str] = []
-    part_index = 0
-
-    while pending:
-        region = pending.pop(0)
-        w, h = region.size
-
-        if h > max_height:
-            mid = h // 2
-            pending.insert(0, region.crop((0, mid, w, h)))
-            pending.insert(0, region.crop((0, 0, w, mid)))
-            continue
-
-        part_index += 1
-        part_path = job_dir / f"longimg-{part_index}.jpg"
-        saved = False
-
-        for quality in (80, 70, 60, 50, 40, 30):
-            region.save(part_path, format="JPEG", quality=quality, optimize=True)
-            if part_path.stat().st_size <= max_bytes:
-                result_paths.append(str(part_path))
-                saved = True
-                break
-
-        if saved:
-            continue
-
-        if h <= 200:
-            emit_error("长图过大，压缩后仍超过 QQ 上传限制（10MB），请私聊获取 PDF")
-
-        mid = h // 2
-        pending.insert(0, region.crop((0, mid, w, h)))
-        pending.insert(0, region.crop((0, 0, w, mid)))
-        part_index -= 1
-
-    return result_paths
-
-
 def main() -> None:
     if len(sys.argv) < 4:
         emit_error("用法: jm_export.py <job_dir> <album_id> <option_path> [max_pages]")
@@ -156,13 +96,12 @@ def main() -> None:
 
     pdf_path = find_first_file(job_dir, ".pdf")
     long_img_path = find_first_file(job_dir, ".png")
-    long_img_paths = optimize_long_img_for_qq(long_img_path, job_dir) if long_img_path else []
 
-    # 允许部分导出成功：群聊只需长图，私聊只需 PDF
-    if not pdf_path and not long_img_paths:
+    # 允许部分导出成功
+    if not pdf_path and not long_img_path:
         emit_error(
             "导出文件不完整，"
-            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_paths else '无'}"
+            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_path else '无'}"
         )
 
     print(
@@ -173,8 +112,7 @@ def main() -> None:
                 "title": title,
                 "pageCount": page_count,
                 "pdf": pdf_path,
-                "longImg": long_img_paths[0] if long_img_paths else None,
-                "longImgs": long_img_paths,
+                "longImg": long_img_path,
             },
             ensure_ascii=False,
         ),

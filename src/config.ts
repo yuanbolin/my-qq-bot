@@ -128,5 +128,14 @@ export const config = {
     maxPages: Number(process.env.JM_MAX_PAGES ?? '200'),
     /** 留空表示不限制；逗号分隔 openid */
     allowedUsers: parseUserIds(process.env.JM_ALLOWED_USERS),
+    /** 本机 HTTP 下载服务端口 */
+    downloadPort: Number(process.env.JM_DOWNLOAD_PORT ?? '8080'),
+    /** 对外下载链接前缀，如 http://47.113.17.22:8080 */
+    downloadBaseUrl: process.env.JM_DOWNLOAD_BASE_URL?.trim() || 'http://47.113.17.22:8080',
+    cacheDir: process.env.JM_CACHE_DIR?.trim()
+      ? path.resolve(process.env.JM_CACHE_DIR)
+      : path.resolve('data/jm/cache'),
+    /** 缓存有效期（毫秒），默认 24 小时 */
+    cacheTtlMs: Number(process.env.JM_CACHE_TTL_MS ?? String(24 * 60 * 60 * 1000)),
   },
 }

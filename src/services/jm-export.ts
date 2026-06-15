@@ -8,7 +8,7 @@ export interface JmExportResult {
   title: string
   pageCount: number
   pdfPath: string
-  longImgPaths: string[]
+  longImgPath: string
   jobDir: string
 }
 
@@ -20,7 +20,6 @@ interface JmExportJson {
   pageCount?: number
   pdf?: string
   longImg?: string
-  longImgs?: string[]
 }
 
 let globalBusy = false
@@ -76,13 +75,8 @@ export function releaseJmLock(): void {
   globalBusy = false
 }
 
-export type JmExportFormat = 'pdf' | 'longimg'
-
-/** 下载并导出 PDF / 长图（按场景校验所需格式） */
-export async function exportJmAlbum(
-  albumId: string,
-  required: JmExportFormat,
-): Promise<JmExportResult> {
+/** 下载并导出 PDF / 长图 */
+export async function exportJmAlbum(albumId: string): Promise<JmExportResult> {
   const jobDir = path.join(
     config.jm.jobsDir,
     `${Date.now()}-${albumId}`,
@@ -118,31 +112,18 @@ export async function exportJmAlbum(
   }
 
   const missingPdf = !parsed.pdf
-  const missingLongImg = !parsed.longImg && !(parsed.longImgs?.length)
-  if (
-    (required === 'pdf' && missingPdf)
-    || (required === 'longimg' && missingLongImg)
-  ) {
+  const missingLongImg = !parsed.longImg
+  if (missingPdf && missingLongImg) {
     await fs.rm(jobDir, { recursive: true, force: true }).catch(() => undefined)
-    const detail = `pdf=${missingPdf ? '无' : '有'}, longImg=${missingLongImg ? '无' : '有'}`
-    throw new Error(
-      parsed.error
-      ?? (required === 'pdf' ? `PDF 导出失败（${detail}）` : `长图导出失败（${detail}）`),
-    )
+    throw new Error(parsed.error ?? 'JM 导出结果不完整')
   }
-
-  const longImgPaths = parsed.longImgs?.length
-    ? parsed.longImgs
-    : parsed.longImg
-      ? [parsed.longImg]
-      : []
 
   return {
     albumId: parsed.albumId ?? albumId,
     title: parsed.title ?? '',
     pageCount: parsed.pageCount ?? 0,
     pdfPath: parsed.pdf ?? '',
-    longImgPaths,
+    longImgPath: parsed.longImg ?? '',
     jobDir,
   }
 }

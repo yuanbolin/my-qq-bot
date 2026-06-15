@@ -10,18 +10,15 @@ import {
   releaseJmLock,
   tryAcquireJmLock,
 } from '../services/jm-export.js'
-import { uploadAndReplyImages, uploadAndReplyPdf } from '../services/qq-media.js'
+import { publishJmDownloads, type JmDownloadLinks } from '../services/jm-cache.js'
 import { isOnCooldown } from '../utils/cooldown.js'
 import { matchCommand, parseCommandArgs } from '../utils/message-parse.js'
 import { replyText } from '../utils/reply.js'
 
 type MessageEvent = GroupMessageEvent | PrivateMessageEvent
 
-function isGroupEvent(event: MessageEvent): event is GroupMessageEvent {
-  return event.message_type === 'group'
-}
-
 function buildHelpText(): string {
+  const ttlHours = Math.round(config.jm.cacheTtlMs / 3_600_000)
   return [
     '【JM 本子下载】基于 jmcomic，需服务器安装 Python 3.12+ 与 pip install jmcomic',
     '',
@@ -31,8 +28,8 @@ function buildHelpText(): string {
     '  /jm帮助 — 显示本说明',
     '',
     '回复方式：',
-    '  群聊 — 长图 PNG（QQ 群不支持发 PDF）',
-    '  私聊 — PDF 文件',
+    `  下载完成后返回 HTTP 下载链接（${ttlHours} 小时内有效）`,
+    '  长图 PNG / PDF 视导出结果提供',
     '',
     `页数限制：单本最多 ${config.jm.maxPages} 页`,
     `冷却时间：${Math.round(config.jm.cooldownMs / 60_000)} 分钟`,
@@ -42,6 +39,25 @@ function buildHelpText(): string {
 function isAllowedUser(userId: string): boolean {
   const allowed = config.jm.allowedUsers
   return allowed.length === 0 || allowed.includes(userId)
+}
+
+function buildDownloadReply(caption: string, links: JmDownloadLinks): string {
+  const ttlHours = Math.round(config.jm.cacheTtlMs / 3_600_000)
+  const lines = [caption, '']
+
+  if (links.longImg) {
+    lines.push(`长图下载：${links.longImg}`)
+  }
+  if (links.pdf) {
+    lines.push(`PDF 下载：${links.pdf}`)
+  }
+  if (!links.longImg && !links.pdf) {
+    lines.push('未生成可下载文件')
+  } else {
+    lines.push(`链接 ${ttlHours} 小时内有效，请及时保存。`)
+  }
+
+  return lines.join('\n')
 }
 
 async function processJm(ctx: {
@@ -98,25 +114,15 @@ async function processJm(ctx: {
   try {
     await replyText(
       ctx.event,
-      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n群聊将返回长图，私聊将返回 PDF。`,
+      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n完成后将返回下载链接。`,
     )
 
-    const result = await exportJmAlbum(
-      albumId,
-      isGroupEvent(ctx.event) ? 'longimg' : 'pdf',
-    )
+    const result = await exportJmAlbum(albumId)
     jobDir = result.jobDir
     const caption = `[JM${result.albumId}] ${result.title}（${result.pageCount} 页）`
+    const links = await publishJmDownloads(result)
 
-    if (isGroupEvent(ctx.event)) {
-      await uploadAndReplyImages(
-        ctx.event,
-        result.longImgPaths,
-        `${caption}\n（PDF 请私聊机器人获取）`,
-      )
-    } else {
-      await uploadAndReplyPdf(ctx.event, result.pdfPath, caption)
-    }
+    await replyText(ctx.event, buildDownloadReply(caption, links))
   } catch (error) {
     await replyText(
       ctx.event,

@@ -10,6 +10,8 @@ import { config } from './config.js'
 import { handleGroupInteraction } from './handlers/group-interaction.js'
 import { handleGroupMessage } from './handlers/group-router.js'
 import { handlePrivateMessage } from './handlers/private-router.js'
+import { cleanupExpiredJmCache, ensureJmCacheDir } from './services/jm-cache.js'
+import { startJmDownloadServer } from './services/jm-download-server.js'
 import { stripSlashPrefix } from './utils/message-parse.js'
 import { logger } from './utils/logger.js'
 import { getStorageBackend, initStorage } from './utils/storage.js'
@@ -123,6 +125,17 @@ async function main() {
 
   await initStorage()
   logger.info('存储后端', { backend: getStorageBackend() })
+
+  await ensureJmCacheDir()
+  startJmDownloadServer()
+  await cleanupExpiredJmCache()
+  setInterval(() => {
+    cleanupExpiredJmCache().catch((error: unknown) => {
+      logger.warn('JM 缓存清理失败', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
+  }, 60 * 60 * 1000)
 
   await bot.start()
 
