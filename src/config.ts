@@ -110,4 +110,22 @@ export const config = {
     fps: Number(process.env.SORRY_FFMPEG_FPS ?? '8'),
     timeoutMs: Number(process.env.SORRY_FFMPEG_TIMEOUT_MS ?? '60000'),
   },
+  /** JM 本子下载：https://github.com/hect0x7/JMComic-Crawler-Python */
+  jm: {
+    pythonPath: process.env.JM_PYTHON_PATH?.trim() || 'python',
+    scriptPath: process.env.JM_SCRIPT_PATH?.trim()
+      ? path.resolve(process.env.JM_SCRIPT_PATH)
+      : path.resolve('scripts/jm_export.py'),
+    optionPath: process.env.JM_OPTION_PATH?.trim()
+      ? path.resolve(process.env.JM_OPTION_PATH)
+      : path.resolve('config/jmcomic.option.yml'),
+    jobsDir: process.env.JM_JOBS_DIR?.trim()
+      ? path.resolve(process.env.JM_JOBS_DIR)
+      : path.resolve('data/jm/jobs'),
+    timeoutMs: Number(process.env.JM_TIMEOUT_MS ?? '600000'),
+    cooldownMs: Number(process.env.JM_COOLDOWN_MS ?? '300000'),
+    maxPages: Number(process.env.JM_MAX_PAGES ?? '200'),
+    /** 留空表示不限制；逗号分隔 openid */
+    allowedUsers: parseUserIds(process.env.JM_ALLOWED_USERS),
+  },
 }

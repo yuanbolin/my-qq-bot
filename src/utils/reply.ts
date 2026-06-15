@@ -130,6 +130,30 @@ export async function replyGif(
   }
 }
 
+/** 发送本地图片文件（绝对路径） */
+export async function replyLocalImage(
+  event: GroupMessageEvent | PrivateMessageEvent,
+  imagePath: string,
+  text?: string,
+) {
+  const parts: Sendable[] = []
+  if (text) {
+    parts.push(segment.text(text))
+  }
+  parts.push(segment.image(imagePath))
+  await event.reply(parts)
+}
+
+/** 私聊发送 PDF 文件 */
+export async function replyPdfFile(
+  event: PrivateMessageEvent,
+  pdfPath: string,
+  text?: string,
+) {
+  const { uploadAndReplyPdf } = await import('../services/qq-media.js')
+  await uploadAndReplyPdf(event, pdfPath, text)
+}
+
 /** @ 用户并发送 GIF（写入临时文件后发送） */
 export async function replyAtGif(
   event: GroupMessageEvent | PrivateMessageEvent,

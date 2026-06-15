@@ -1,0 +1,20 @@
+# jmcomic 配置：https://jmcomic.readthedocs.io/zh-cn/latest/option_file_syntax/
+# 可通过环境变量 JM_OPTION_PATH 覆盖路径
+
+log: pretty
+
+dir_rule:
+  base_dir: ./data/jm/downloads
+  rule: Bd_Aid_Atitle
+
+client:
+  # api 免登录；若失败可改为 mobile
+  impl: api
+  domain:
+    html:
+      - jmcomic1.me
+      - jmcomic.me
+
+download:
+  image:
+    suffix: .jpg

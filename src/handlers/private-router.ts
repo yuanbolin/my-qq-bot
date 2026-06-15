@@ -5,6 +5,7 @@ import { memePrivateHandle } from './meme.js'
 import { oickFunPrivateHandle } from './oick-fun.js'
 import { sixtyApiPrivateHandle } from './sixty-api.js'
 import { sorryPrivateHandle } from './sorry.js'
+import { jmPrivateHandle } from './jm.js'
 
 function handleBasicCommand(text: string): string | null {
   const content = text.trim()
@@ -35,6 +36,8 @@ function handleBasicCommand(text: string): string | null {
       '/sorry 或 /为所欲为 - 生成「有钱真的可以为所欲为」GIF',
       '/王境泽 或 /真香 - 王境泽表情包',
       '/sorry帮助 - 表情包命令说明',
+      '/jm <车号> - 下载本子（群聊长图，私聊 PDF）',
+      '/jm帮助 - JM 命令说明',
     ].join('\n')
   }
 
@@ -50,6 +53,7 @@ const handlers = [
   { name: 'oick-fun', handle: oickFunPrivateHandle },
   { name: 'meme', handle: memePrivateHandle },
   { name: 'sorry', handle: sorryPrivateHandle },
+  { name: 'jm', handle: jmPrivateHandle },
 ]
 
 export async function handlePrivateMessage(ctx: PrivateContext): Promise<boolean> {

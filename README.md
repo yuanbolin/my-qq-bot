@@ -59,6 +59,25 @@ npm run pm2:logs
 
 内置命令：`ping`、`help`、`echo <内容>`
 
+### JM 本子下载（`/jm`）
+
+基于 [JMComic-Crawler-Python](https://github.com/hect0x7/JMComic-Crawler-Python)，通过 Python 子进程下载并导出：
+
+| 场景 | 返回格式 |
+|------|----------|
+| 群聊 | 长图 PNG（QQ 群不支持发 PDF） |
+| 私聊 | PDF 文件 |
+
+```bash
+# 安装 Python 依赖
+pip install jmcomic -U
+
+# 检查环境
+npm run check-jm
+```
+
+命令示例：`/jm 350234`、`/jm帮助`
+
 ## 脚本
 
 | 命令 | 说明 |
@@ -66,6 +85,8 @@ npm run pm2:logs
 | `npm run dev` | 开发模式运行 |
 | `npm run build` | 编译 TypeScript |
 | `npm start` | 运行编译产物 |
+| `npm run download-sorry` | 下载 sorry 模板 mp4 |
+| `npm run check-jm` | 检查 JM Python 环境 |
 | `npm run pm2:start` | 编译并用 PM2 后台启动 |
 | `npm run pm2:restart` | 重新编译并重启 |
 | `npm run pm2:stop` | 停止进程 |

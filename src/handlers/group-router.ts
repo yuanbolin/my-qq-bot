@@ -11,6 +11,7 @@ import { xiaolajiHandle } from './xiaolaji.js'
 import { petpetHandle } from './petpet.js'
 import { rollpigHandle } from './rollpig.js'
 import { sorryHandle } from './sorry.js'
+import { jmGroupHandle } from './jm.js'
 
 const handlers = [
   { name: 'fangzhang', handle: fangzhangHandle },
@@ -24,6 +25,7 @@ const handlers = [
   { name: 'meme', handle: memeGroupHandle },
   { name: 'rollpig', handle: rollpigHandle },
   { name: 'sorry', handle: sorryHandle },
+  { name: 'jm', handle: jmGroupHandle },
 ]
 
 export async function handleGroupMessage(ctx: GroupContext): Promise<boolean> {

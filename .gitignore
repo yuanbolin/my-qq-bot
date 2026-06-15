@@ -4,3 +4,4 @@ logs/
 *.log
 .env
 assets/sorry/cache/
+data/jm/
