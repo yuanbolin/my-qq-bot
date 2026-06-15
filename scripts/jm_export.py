@@ -12,8 +12,23 @@ from pathlib import Path
 
 
 def emit_error(message: str, code: int = 1) -> None:
+    sys.stdout = _REAL_STDOUT
     print(json.dumps({"ok": False, "error": message}, ensure_ascii=False), flush=True)
     sys.exit(code)
+
+
+class _StdoutToStderr:
+    """将 jmcomic 日志重定向到 stderr，避免污染 stdout 中的 JSON 结果。"""
+
+    def write(self, data: str) -> None:
+        if data:
+            sys.stderr.write(data)
+
+    def flush(self) -> None:
+        sys.stderr.flush()
+
+
+_REAL_STDOUT = sys.stdout
 
 
 def find_first_file(directory: Path, suffix: str) -> str | None:
@@ -37,6 +52,8 @@ def main() -> None:
 
     job_dir.mkdir(parents=True, exist_ok=True)
 
+    # jmcomic 的 pretty 日志会写入 stdout，需重定向以免 Node 无法解析 JSON
+    sys.stdout = _StdoutToStderr()
     try:
         from jmcomic import Feature, create_option_by_file, download_album
     except ImportError:
@@ -74,6 +91,8 @@ def main() -> None:
         download_album(album_id, option, extra=extra)
     except Exception as exc:
         emit_error(f"下载导出失败: {exc}")
+    finally:
+        sys.stdout = _REAL_STDOUT
 
     pdf_path = find_first_file(job_dir, ".pdf")
     long_img_path = find_first_file(job_dir, ".png")

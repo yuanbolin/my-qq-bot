@@ -104,10 +104,9 @@ export async function exportJmAlbum(
     throw new Error(result.error ?? 'JM 导出失败')
   }
 
-  let parsed: JmExportJson
-  try {
-    parsed = JSON.parse(result.stdout.trim()) as JmExportJson
-  } catch {
+  const parsed = parseJmStdout(result.stdout)
+
+  if (!parsed) {
     await fs.rm(jobDir, { recursive: true, force: true }).catch(() => undefined)
     throw new Error(`JM 脚本输出无法解析: ${result.stdout.slice(0, 200)}`)
   }
@@ -202,16 +201,11 @@ function runPython(args: string[], timeoutMs: number): Promise<RunPythonResult> 
         return
       }
 
-      const lastLine = stdout.trim().split('\n').pop() ?? ''
+      const parsed = parseJmStdout(stdout)
       let message = stderr.trim() || `JM 脚本退出码 ${code}`
 
-      try {
-        const json = JSON.parse(lastLine) as JmExportJson
-        if (json.error) {
-          message = json.error
-        }
-      } catch {
-        // 使用 stderr 默认信息
+      if (parsed?.error) {
+        message = parsed.error
       }
 
       resolve({
@@ -221,4 +215,35 @@ function runPython(args: string[], timeoutMs: number): Promise<RunPythonResult> 
       })
     })
   })
+}
+
+/** 去除 jmcomic pretty 日志中的 ANSI 颜色码 */
+function stripAnsi(text: string): string {
+  return text
+    .replace(/\u001b\[[0-9;]*m/g, '')
+    .replace(/\[[0-9;]*m/g, '')
+}
+
+/** 从 stdout 中提取脚本输出的 JSON（兼容混入的 jmcomic 日志） */
+function parseJmStdout(stdout: string): JmExportJson | null {
+  const lines = stdout
+    .split(/\r?\n/)
+    .map((line) => stripAnsi(line).trim())
+    .filter(Boolean)
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]
+    if (!line.startsWith('{')) continue
+
+    try {
+      const json = JSON.parse(line) as JmExportJson
+      if (typeof json.ok === 'boolean') {
+        return json
+      }
+    } catch {
+      // 继续向前查找
+    }
+  }
+
+  return null
 }
