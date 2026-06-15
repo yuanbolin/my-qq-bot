@@ -8,7 +8,7 @@ export interface JmExportResult {
   title: string
   pageCount: number
   pdfPath: string
-  longImgPath: string
+  longImgPaths: string[]
   jobDir: string
 }
 
@@ -20,6 +20,7 @@ interface JmExportJson {
   pageCount?: number
   pdf?: string
   longImg?: string
+  longImgs?: string[]
 }
 
 let globalBusy = false
@@ -117,7 +118,7 @@ export async function exportJmAlbum(
   }
 
   const missingPdf = !parsed.pdf
-  const missingLongImg = !parsed.longImg
+  const missingLongImg = !parsed.longImg && !(parsed.longImgs?.length)
   if (
     (required === 'pdf' && missingPdf)
     || (required === 'longimg' && missingLongImg)
@@ -130,12 +131,18 @@ export async function exportJmAlbum(
     )
   }
 
+  const longImgPaths = parsed.longImgs?.length
+    ? parsed.longImgs
+    : parsed.longImg
+      ? [parsed.longImg]
+      : []
+
   return {
     albumId: parsed.albumId ?? albumId,
     title: parsed.title ?? '',
     pageCount: parsed.pageCount ?? 0,
     pdfPath: parsed.pdf ?? '',
-    longImgPath: parsed.longImg ?? '',
+    longImgPaths,
     jobDir,
   }
 }

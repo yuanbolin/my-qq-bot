@@ -38,6 +38,50 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
     return str(files[0]) if files else None
 
 
+def optimize_long_img_for_qq(png_path: str, job_dir: Path) -> list[str]:
+    """将 PNG 长图转为 JPEG 并按大小分片，适配 QQ 上传限制（约 28MB/张）。"""
+    max_bytes = 28 * 1024 * 1024
+
+    try:
+        from PIL import Image
+    except ImportError:
+        return [png_path]
+
+    img = Image.open(png_path).convert("RGB")
+    width, height = img.size
+
+    def save_jpeg(region, path: Path, quality: int) -> int:
+        region.save(path, format="JPEG", quality=quality, optimize=True)
+        return path.stat().st_size
+
+    full_jpg = job_dir / "longimg.jpg"
+    for quality in (85, 75, 65, 55, 45):
+        if save_jpeg(img, full_jpg, quality) <= max_bytes:
+            return [str(full_jpg)]
+
+    for part_count in range(2, 11):
+        slice_h = (height + part_count - 1) // part_count
+        paths: list[str] = []
+        ok = True
+
+        for index in range(part_count):
+            top = index * slice_h
+            if top >= height:
+                break
+            bottom = min((index + 1) * slice_h, height)
+            crop = img.crop((0, top, width, bottom))
+            part_path = job_dir / f"longimg-{index + 1}.jpg"
+            if save_jpeg(crop, part_path, 75) > max_bytes:
+                ok = False
+                break
+            paths.append(str(part_path))
+
+        if ok and paths:
+            return paths
+
+    emit_error("长图过大，压缩后仍超过 QQ 上传限制，请私聊获取 PDF")
+
+
 def main() -> None:
     if len(sys.argv) < 4:
         emit_error("用法: jm_export.py <job_dir> <album_id> <option_path> [max_pages]")
@@ -96,12 +140,13 @@ def main() -> None:
 
     pdf_path = find_first_file(job_dir, ".pdf")
     long_img_path = find_first_file(job_dir, ".png")
+    long_img_paths = optimize_long_img_for_qq(long_img_path, job_dir) if long_img_path else []
 
     # 允许部分导出成功：群聊只需长图，私聊只需 PDF
-    if not pdf_path and not long_img_path:
+    if not pdf_path and not long_img_paths:
         emit_error(
             "导出文件不完整，"
-            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_path else '无'}"
+            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_paths else '无'}"
         )
 
     print(
@@ -112,7 +157,8 @@ def main() -> None:
                 "title": title,
                 "pageCount": page_count,
                 "pdf": pdf_path,
-                "longImg": long_img_path,
+                "longImg": long_img_paths[0] if long_img_paths else None,
+                "longImgs": long_img_paths,
             },
             ensure_ascii=False,
         ),

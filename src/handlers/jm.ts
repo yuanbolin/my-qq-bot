@@ -10,9 +10,10 @@ import {
   releaseJmLock,
   tryAcquireJmLock,
 } from '../services/jm-export.js'
+import { uploadAndReplyImages, uploadAndReplyPdf } from '../services/qq-media.js'
 import { isOnCooldown } from '../utils/cooldown.js'
 import { matchCommand, parseCommandArgs } from '../utils/message-parse.js'
-import { replyLocalImage, replyPdfFile, replyText } from '../utils/reply.js'
+import { replyText } from '../utils/reply.js'
 
 type MessageEvent = GroupMessageEvent | PrivateMessageEvent
 
@@ -108,9 +109,13 @@ async function processJm(ctx: {
     const caption = `[JM${result.albumId}] ${result.title}（${result.pageCount} 页）`
 
     if (isGroupEvent(ctx.event)) {
-      await replyLocalImage(ctx.event, result.longImgPath, `${caption}\n（PDF 请私聊机器人获取）`)
+      await uploadAndReplyImages(
+        ctx.event,
+        result.longImgPaths,
+        `${caption}\n（PDF 请私聊机器人获取）`,
+      )
     } else {
-      await replyPdfFile(ctx.event, result.pdfPath, caption)
+      await uploadAndReplyPdf(ctx.event, result.pdfPath, caption)
     }
   } catch (error) {
     await replyText(
