@@ -78,7 +78,8 @@ def main() -> None:
     pdf_path = find_first_file(job_dir, ".pdf")
     long_img_path = find_first_file(job_dir, ".png")
 
-    if not pdf_path or not long_img_path:
+    # 允许部分导出成功：群聊只需长图，私聊只需 PDF
+    if not pdf_path and not long_img_path:
         emit_error(
             "导出文件不完整，"
             f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_path else '无'}"

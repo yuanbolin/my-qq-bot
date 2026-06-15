@@ -100,7 +100,10 @@ async function processJm(ctx: {
       `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n群聊将返回长图，私聊将返回 PDF。`,
     )
 
-    const result = await exportJmAlbum(albumId)
+    const result = await exportJmAlbum(
+      albumId,
+      isGroupEvent(ctx.event) ? 'longimg' : 'pdf',
+    )
     jobDir = result.jobDir
     const caption = `[JM${result.albumId}] ${result.title}（${result.pageCount} 页）`
 
