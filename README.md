@@ -69,8 +69,11 @@ npm run pm2:logs
 | 私聊 | PDF 文件 |
 
 ```bash
-# 安装 Python 依赖
-pip install jmcomic -U
+# 安装 Python 依赖（务必用 3.12 对应的 pip，不要用系统默认 python3.6）
+/usr/local/bin/python3.12 -m pip install jmcomic -U
+
+# 在 .env 中指定 Python 路径（CentOS 默认 python 常为 3.6）
+# JM_PYTHON_PATH=/usr/local/bin/python3.12
 
 # 检查环境
 npm run check-jm

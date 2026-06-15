@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import path from 'node:path'
+import { resolveJmPythonPath } from './utils/jm-python-path.js'
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim()
@@ -112,7 +113,7 @@ export const config = {
   },
   /** JM 本子下载：https://github.com/hect0x7/JMComic-Crawler-Python */
   jm: {
-    pythonPath: process.env.JM_PYTHON_PATH?.trim() || 'python',
+    pythonPath: resolveJmPythonPath(),
     scriptPath: process.env.JM_SCRIPT_PATH?.trim()
       ? path.resolve(process.env.JM_SCRIPT_PATH)
       : path.resolve('scripts/jm_export.py'),

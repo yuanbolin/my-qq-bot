@@ -57,7 +57,7 @@ export async function checkJmReady(): Promise<{ ok: true } | { ok: false; reason
   if (!importCheck.ok) {
     return {
       ok: false,
-      reason: '未安装 jmcomic，请在服务器执行: pip install jmcomic -U',
+      reason: `未安装 jmcomic，请执行: ${config.jm.pythonPath} -m pip install jmcomic -U`,
     }
   }
 
