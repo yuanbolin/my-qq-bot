@@ -5,8 +5,8 @@ import { createReadStream } from 'node:fs'
 /** QQ 协议：前 10002432 字节的 MD5 */
 const MD5_10M_SIZE = 10_002_432
 
-/** 图片上传上限（QQ 官方：30MB） */
-export const QQ_IMAGE_MAX_BYTES = 30 * 1024 * 1024
+/** 群聊图片上传上限（QQ 官方约 10MB） */
+export const QQ_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 
 interface FileHashes {
   md5: string
@@ -134,7 +134,7 @@ export async function chunkedUploadFile(
 
   if (fileSize > QQ_IMAGE_MAX_BYTES) {
     throw new Error(
-      `文件过大（${(fileSize / 1024 / 1024).toFixed(1)}MB），超过 QQ 30MB 上限`,
+      `图片过大（${(fileSize / 1024 / 1024).toFixed(1)}MB），超过 QQ 10MB 上限`,
     )
   }
 

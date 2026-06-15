@@ -39,8 +39,10 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
 
 
 def optimize_long_img_for_qq(png_path: str, job_dir: Path) -> list[str]:
-    """将 PNG 长图转为 JPEG 并按大小分片，适配 QQ 上传限制（约 28MB/张）。"""
-    max_bytes = 28 * 1024 * 1024
+    """将 PNG 长图转为 JPEG 并切片，适配 QQ 群聊约 10MB/张、单边 ≤32767 像素限制。"""
+    # 留余量，避免边界触发 850031
+    max_bytes = 9 * 1024 * 1024
+    max_height = 30_000
 
     try:
         from PIL import Image
@@ -50,36 +52,50 @@ def optimize_long_img_for_qq(png_path: str, job_dir: Path) -> list[str]:
     img = Image.open(png_path).convert("RGB")
     width, height = img.size
 
-    def save_jpeg(region, path: Path, quality: int) -> int:
-        region.save(path, format="JPEG", quality=quality, optimize=True)
-        return path.stat().st_size
+    # 宽度过大时先等比缩小，降低单张体积
+    if width > 1600:
+        scale = 1600 / width
+        resample = getattr(Image, 'Resampling', Image).LANCZOS
+        img = img.resize((1600, max(1, int(height * scale))), resample)
+        width, height = img.size
 
-    full_jpg = job_dir / "longimg.jpg"
-    for quality in (85, 75, 65, 55, 45):
-        if save_jpeg(img, full_jpg, quality) <= max_bytes:
-            return [str(full_jpg)]
+    pending: list = [img]
+    result_paths: list[str] = []
+    part_index = 0
 
-    for part_count in range(2, 11):
-        slice_h = (height + part_count - 1) // part_count
-        paths: list[str] = []
-        ok = True
+    while pending:
+        region = pending.pop(0)
+        w, h = region.size
 
-        for index in range(part_count):
-            top = index * slice_h
-            if top >= height:
+        if h > max_height:
+            mid = h // 2
+            pending.insert(0, region.crop((0, mid, w, h)))
+            pending.insert(0, region.crop((0, 0, w, mid)))
+            continue
+
+        part_index += 1
+        part_path = job_dir / f"longimg-{part_index}.jpg"
+        saved = False
+
+        for quality in (80, 70, 60, 50, 40, 30):
+            region.save(part_path, format="JPEG", quality=quality, optimize=True)
+            if part_path.stat().st_size <= max_bytes:
+                result_paths.append(str(part_path))
+                saved = True
                 break
-            bottom = min((index + 1) * slice_h, height)
-            crop = img.crop((0, top, width, bottom))
-            part_path = job_dir / f"longimg-{index + 1}.jpg"
-            if save_jpeg(crop, part_path, 75) > max_bytes:
-                ok = False
-                break
-            paths.append(str(part_path))
 
-        if ok and paths:
-            return paths
+        if saved:
+            continue
 
-    emit_error("长图过大，压缩后仍超过 QQ 上传限制，请私聊获取 PDF")
+        if h <= 200:
+            emit_error("长图过大，压缩后仍超过 QQ 上传限制（10MB），请私聊获取 PDF")
+
+        mid = h // 2
+        pending.insert(0, region.crop((0, mid, w, h)))
+        pending.insert(0, region.crop((0, 0, w, mid)))
+        part_index -= 1
+
+    return result_paths
 
 
 def main() -> None:
