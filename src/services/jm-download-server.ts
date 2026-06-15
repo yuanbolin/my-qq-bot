@@ -4,8 +4,16 @@ import path from 'node:path'
 import { config } from '../config.js'
 import { logger } from '../utils/logger.js'
 
-const ALLOWED_FILES = new Set(['longimg.png', 'album.pdf'])
 const TOKEN_PATTERN = /^[a-f0-9]{32}$/
+/** 允许 longimg.jpg / longimg-1.jpg / longimg.png / album.pdf */
+const ALLOWED_FILE_PATTERN = /^(longimg(-\d+)?\.(jpg|jpeg|png)|album\.pdf)$/i
+
+function resolveContentType(filename: string): string {
+  const lower = filename.toLowerCase()
+  if (lower.endsWith('.pdf')) return 'application/pdf'
+  if (lower.endsWith('.png')) return 'image/png'
+  return 'image/jpeg'
+}
 
 /** 启动 JM 文件 HTTP 下载服务 */
 export function startJmDownloadServer(): void {
@@ -21,7 +29,7 @@ export function startJmDownloadServer(): void {
       }
 
       const [, token, filename] = match
-      if (!TOKEN_PATTERN.test(token) || !ALLOWED_FILES.has(filename)) {
+      if (!TOKEN_PATTERN.test(token) || !ALLOWED_FILE_PATTERN.test(filename)) {
         res.writeHead(404)
         res.end('Not Found')
         return
@@ -35,12 +43,8 @@ export function startJmDownloadServer(): void {
         return
       }
 
-      const contentType = filename.endsWith('.pdf')
-        ? 'application/pdf'
-        : 'image/png'
-
       res.writeHead(200, {
-        'Content-Type': contentType,
+        'Content-Type': resolveContentType(filename),
         'Content-Length': stat.size,
         'Content-Disposition': `attachment; filename="${filename}"`,
       })

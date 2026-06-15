@@ -29,7 +29,7 @@ function buildHelpText(): string {
     '',
     '回复方式：',
     `  下载完成后返回 HTTP 下载链接（${ttlHours} 小时内有效）`,
-    '  长图 PNG / PDF 视导出结果提供',
+    '  长图先压缩至 9MB 以内（过大自动分片），PDF 原样提供',
     '',
     `页数限制：单本最多 ${config.jm.maxPages} 页`,
     `冷却时间：${Math.round(config.jm.cooldownMs / 60_000)} 分钟`,
@@ -45,13 +45,20 @@ function buildDownloadReply(caption: string, links: JmDownloadLinks): string {
   const ttlHours = Math.round(config.jm.cacheTtlMs / 3_600_000)
   const lines = [caption, '']
 
-  if (links.longImg) {
-    lines.push(`长图下载：${links.longImg}`)
+  if (links.longImgs.length === 1) {
+    lines.push(`长图下载：${links.longImgs[0]}`)
+  } else if (links.longImgs.length > 1) {
+    lines.push(`长图下载（共 ${links.longImgs.length} 张，每张 ≤9MB）：`)
+    for (let i = 0; i < links.longImgs.length; i++) {
+      lines.push(`  ${i + 1}. ${links.longImgs[i]}`)
+    }
   }
+
   if (links.pdf) {
     lines.push(`PDF 下载：${links.pdf}`)
   }
-  if (!links.longImg && !links.pdf) {
+
+  if (links.longImgs.length === 0 && !links.pdf) {
     lines.push('未生成可下载文件')
   } else {
     lines.push(`链接 ${ttlHours} 小时内有效，请及时保存。`)
@@ -114,7 +121,7 @@ async function processJm(ctx: {
   try {
     await replyText(
       ctx.event,
-      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n完成后将返回下载链接。`,
+      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n完成后将压缩长图并返回下载链接。`,
     )
 
     const result = await exportJmAlbum(albumId)

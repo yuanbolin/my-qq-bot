@@ -38,6 +38,64 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
     return str(files[0]) if files else None
 
 
+def compress_long_img_for_download(png_path: str, job_dir: Path) -> list[str]:
+    """将 PNG 长图压缩为 JPEG（单张 ≤9MB），必要时按高度切分。"""
+    max_bytes = 9 * 1024 * 1024
+    max_height = 30_000
+
+    try:
+        from PIL import Image
+    except ImportError:
+        return [png_path]
+
+    img = Image.open(png_path).convert("RGB")
+    width, height = img.size
+
+    if width > 1600:
+        scale = 1600 / width
+        resample = getattr(Image, "Resampling", Image).LANCZOS
+        img = img.resize((1600, max(1, int(height * scale))), resample)
+        width, height = img.size
+
+    pending: list = [img]
+    result_paths: list[str] = []
+    part_index = 0
+
+    while pending:
+        region = pending.pop(0)
+        w, h = region.size
+
+        if h > max_height:
+            mid = h // 2
+            pending.insert(0, region.crop((0, mid, w, h)))
+            pending.insert(0, region.crop((0, 0, w, mid)))
+            continue
+
+        part_index += 1
+        part_path = job_dir / f"longimg-{part_index}.jpg"
+        saved = False
+
+        for quality in (85, 75, 65, 55, 45, 35, 25):
+            region.save(part_path, format="JPEG", quality=quality, optimize=True)
+            if part_path.stat().st_size <= max_bytes:
+                result_paths.append(str(part_path))
+                saved = True
+                break
+
+        if saved:
+            continue
+
+        if h <= 200:
+            emit_error("长图过大，压缩至 9MB 以内失败")
+
+        mid = h // 2
+        pending.insert(0, region.crop((0, mid, w, h)))
+        pending.insert(0, region.crop((0, 0, w, mid)))
+        part_index -= 1
+
+    return result_paths
+
+
 def main() -> None:
     if len(sys.argv) < 4:
         emit_error("用法: jm_export.py <job_dir> <album_id> <option_path> [max_pages]")
@@ -96,12 +154,14 @@ def main() -> None:
 
     pdf_path = find_first_file(job_dir, ".pdf")
     long_img_path = find_first_file(job_dir, ".png")
+    long_img_paths = (
+        compress_long_img_for_download(long_img_path, job_dir) if long_img_path else []
+    )
 
-    # 允许部分导出成功
-    if not pdf_path and not long_img_path:
+    if not pdf_path and not long_img_paths:
         emit_error(
             "导出文件不完整，"
-            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_path else '无'}"
+            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_paths else '无'}"
         )
 
     print(
@@ -112,7 +172,8 @@ def main() -> None:
                 "title": title,
                 "pageCount": page_count,
                 "pdf": pdf_path,
-                "longImg": long_img_path,
+                "longImg": long_img_paths[0] if long_img_paths else None,
+                "longImgs": long_img_paths,
             },
             ensure_ascii=False,
         ),

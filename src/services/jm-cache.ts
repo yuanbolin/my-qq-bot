@@ -5,9 +5,17 @@ import { config } from '../config.js'
 import type { JmExportResult } from './jm-export.js'
 
 export interface JmDownloadLinks {
-  longImg?: string
+  longImgs: string[]
   pdf?: string
   expiresAt: number
+}
+
+function cacheFilename(sourcePath: string, index: number, total: number): string {
+  const ext = path.extname(sourcePath).toLowerCase() || '.jpg'
+  if (total === 1) {
+    return `longimg${ext}`
+  }
+  return `longimg-${index + 1}${ext}`
 }
 
 /** 将导出文件复制到缓存目录并生成下载链接 */
@@ -20,12 +28,15 @@ export async function publishJmDownloads(
 
   const baseUrl = config.jm.downloadBaseUrl.replace(/\/$/, '')
   const links: JmDownloadLinks = {
+    longImgs: [],
     expiresAt: Date.now() + config.jm.cacheTtlMs,
   }
 
-  if (result.longImgPath) {
-    await fs.copyFile(result.longImgPath, path.join(cacheDir, 'longimg.png'))
-    links.longImg = `${baseUrl}/jm/${token}/longimg.png`
+  const total = result.longImgPaths.length
+  for (let i = 0; i < total; i++) {
+    const filename = cacheFilename(result.longImgPaths[i], i, total)
+    await fs.copyFile(result.longImgPaths[i], path.join(cacheDir, filename))
+    links.longImgs.push(`${baseUrl}/jm/${token}/${filename}`)
   }
 
   if (result.pdfPath) {
