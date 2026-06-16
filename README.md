@@ -84,7 +84,7 @@ location /jm_img/ {
 }
 ```
 
-链接格式：`https://jtgy.gemstonecn.com/jm_img/{token}/longimg-2.jpg`
+链接格式：`https://jtgy.gemstonecn.com/jm_img/{token}/longimg.jpg`（单张完整长图）
 
 命令示例：`/jm 350234`、`/jm帮助`
 

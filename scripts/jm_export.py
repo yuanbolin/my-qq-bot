@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 JM 本子导出脚本，供 Node bot 子进程调用。
-依赖：pip install jmcomic -U
+流程：jmcomic 下载分张 → PIL 竖向拼接为一张长图 → 压缩为 longimg.jpg → 删除原分张。
+依赖：pip install jmcomic pillow -U
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import traceback
 from pathlib import Path
@@ -32,6 +34,10 @@ class _StdoutToStderr:
 _REAL_STDOUT = sys.stdout
 
 
+def natural_sort_key(text: str) -> list:
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", text)]
+
+
 def find_first_file(directory: Path, suffix: str) -> str | None:
     files = sorted(directory.glob(f"*{suffix}"))
     if not files:
@@ -39,67 +45,164 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
     return str(files[0]) if files else None
 
 
-def compress_long_img_for_download(png_path: str, job_dir: Path) -> list[str]:
-    """按高度切分长图后逐片压缩，优先保持原始宽度与较高 JPEG 质量。"""
-    max_bytes = int(os.environ.get("JM_LONGIMG_MAX_BYTES", str(9 * 1024 * 1024)))
-    strip_height = int(os.environ.get("JM_LONGIMG_STRIP_HEIGHT", "8000"))
-    jpeg_quality_start = int(os.environ.get("JM_LONGIMG_JPEG_QUALITY", "92"))
-
-    try:
-        from PIL import Image
-    except ImportError:
-        return [png_path]
-
-    resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-    img = Image.open(png_path).convert("RGB")
-    width, height = img.size
-
-    # 先按固定高度切成互不重叠的条带，避免旧逻辑出现重复片段
-    strips: list = []
-    y = 0
-    while y < height:
-        h = min(strip_height, height - y)
-        strips.append(img.crop((0, y, width, y + h)).copy())
-        y += h
-
-    result_paths: list[str] = []
-
-    for index, strip in enumerate(strips, start=1):
-        part_path = job_dir / f"longimg-{index}.jpg"
-        if _save_strip_jpeg(strip, part_path, max_bytes, jpeg_quality_start, resample):
-            result_paths.append(str(part_path))
-        else:
-            emit_error(f"长图第 {index}/{len(strips)} 片压缩至 9MB 以内失败，请调小 JM_LONGIMG_STRIP_HEIGHT")
-
-    return result_paths
+def resolve_download_base(option_path: str, option) -> Path:
+    base_dir = getattr(getattr(option, "dir_rule", None), "base_dir", "./data/jm/downloads")
+    base = Path(str(base_dir))
+    if not base.is_absolute():
+        project_root = Path(option_path).resolve().parent.parent
+        base = (project_root / base).resolve()
+    return base
 
 
-def _save_strip_jpeg(strip, dest: Path, max_bytes: int, quality_start: int, resample) -> bool:
-    """保存单条带 JPEG，必要时降低质量或小幅缩小尺寸。"""
+def collect_album_page_images(base_dir: Path, album_id: str) -> list[Path]:
+    """收集本子下载目录下的分张图片（按路径与文件名自然排序）。"""
+    patterns = ("*.jpg", "*.jpeg", "*.png", "*.webp")
+    images: list[Path] = []
+
+    if not base_dir.exists():
+        return images
+
+    for pattern in patterns:
+        for path in base_dir.rglob(pattern):
+            if not path.is_file():
+                continue
+            posix = path.as_posix()
+            if album_id not in posix:
+                continue
+            name = path.name.lower()
+            if name.startswith("longimg") or name == "album.pdf":
+                continue
+            images.append(path)
+
+    return sorted(set(images), key=lambda p: (natural_sort_key(str(p.parent)), natural_sort_key(p.name)))
+
+
+def stitch_page_images(image_paths: list[Path], output_png: Path) -> None:
+    """将分张竖向拼接为一张长图。"""
     from PIL import Image
 
-    qualities = []
+    if not image_paths:
+        emit_error("未找到可拼接的分张图片")
+
+    resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+    opened = [Image.open(p).convert("RGB") for p in image_paths]
+
+    try:
+        target_width = max(img.width for img in opened)
+        normalized = []
+        for img in opened:
+            if img.width != target_width:
+                new_h = max(1, int(img.height * target_width / img.width))
+                img = img.resize((target_width, new_h), resample)
+            normalized.append(img)
+
+        total_height = sum(img.height for img in normalized)
+        canvas = Image.new("RGB", (target_width, total_height), (255, 255, 255))
+
+        y = 0
+        for img in normalized:
+            canvas.paste(img, (0, y))
+            y += img.height
+
+        output_png.parent.mkdir(parents=True, exist_ok=True)
+        canvas.save(output_png, format="PNG")
+    finally:
+        for img in opened:
+            img.close()
+
+
+def finalize_single_longimg(source_path: Path, job_dir: Path) -> str:
+    """输出单张 longimg.jpg，整图压缩但不切分。"""
+    from PIL import Image
+
+    max_bytes = int(os.environ.get("JM_LONGIMG_MAX_BYTES", str(50 * 1024 * 1024)))
+    quality_start = int(os.environ.get("JM_LONGIMG_JPEG_QUALITY", "90"))
+    output = job_dir / "longimg.jpg"
+
+    resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+    img = Image.open(source_path).convert("RGB")
+
+    qualities: list[int] = []
     q = quality_start
-    while q >= 60:
+    while q >= 55:
         qualities.append(q)
         q -= 5
 
-    for scale in (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7):
-        w, h = strip.size
-        target = strip if scale >= 0.999 else strip.resize(
-            (max(1, int(w * scale)), max(1, int(h * scale))),
-            resample,
-        )
-        for quality in qualities:
-            target.save(dest, format="JPEG", quality=quality, optimize=True)
-            if dest.stat().st_size <= max_bytes:
-                return True
+    try:
+        for scale in (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6):
+            w, h = img.size
+            target = img if scale >= 0.999 else img.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                resample,
+            )
+            for quality in qualities:
+                target.save(output, format="JPEG", quality=quality, optimize=True)
+                if output.stat().st_size <= max_bytes:
+                    return str(output)
 
-    return False
+        emit_error(
+            f"长图压缩后仍超过 {max_bytes // (1024 * 1024)}MB，"
+            "请调高 JM_LONGIMG_MAX_BYTES 或降低 JM_MAX_PAGES"
+        )
+    finally:
+        img.close()
+        if source_path != output and source_path.exists():
+            source_path.unlink(missing_ok=True)
+
+    return str(output)
+
+
+def delete_files(paths: list[Path]) -> None:
+    for path in paths:
+        try:
+            if path.is_file():
+                path.unlink()
+        except OSError:
+            pass
+
+
+def cleanup_empty_dirs(root: Path) -> None:
+    if not root.exists():
+        return
+    for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+        current = Path(dirpath)
+        if current == root:
+            continue
+        if not any(current.iterdir()):
+            try:
+                current.rmdir()
+            except OSError:
+                pass
+
+
+def build_longimg_from_pages(
+    option_path: str,
+    option,
+    album_id: str,
+    job_dir: Path,
+) -> str:
+    base_dir = resolve_download_base(option_path, option)
+    page_images = collect_album_page_images(base_dir, album_id)
+
+    if not page_images:
+        emit_error(f"下载完成但未在 {base_dir} 找到本子 {album_id} 的分张图片")
+
+    temp_png = job_dir / "_stitched.png"
+    stitch_page_images(page_images, temp_png)
+
+    longimg_path = finalize_single_longimg(temp_png, job_dir)
+
+    delete_files(page_images)
+    cleanup_empty_dirs(base_dir)
+
+    for leftover in job_dir.glob("longimg-*.jpg"):
+        if leftover.name != "longimg.jpg":
+            leftover.unlink(missing_ok=True)
+
+    return longimg_path
 
 
 def resolve_page_count(album, client) -> int:
-    """album.page_count 有时为 0，回退为各章节页数之和。"""
     page_count = int(getattr(album, "page_count", 0) or 0)
     if page_count > 0:
         return page_count
@@ -129,7 +232,6 @@ def main() -> None:
 
     job_dir.mkdir(parents=True, exist_ok=True)
 
-    # jmcomic 的 pretty 日志会写入 stdout，需重定向以免 Node 无法解析 JSON
     sys.stdout = _StdoutToStderr()
     try:
         from jmcomic import Feature, create_option_by_file, download_album
@@ -148,20 +250,14 @@ def main() -> None:
 
     if page_count > max_pages:
         emit_error(
-            f"本子页数 {page_count} 超过限制 {max_pages}，请私聊获取 PDF 或联系管理员调高 JM_MAX_PAGES"
+            f"本子页数 {page_count} 超过限制 {max_pages}，请联系管理员调高 JM_MAX_PAGES"
         )
 
-    extra = (
-        Feature.export_pdf(
-            pdf_dir=str(job_dir),
-            filename_rule="Aid",
-            delete_original_file=True,
-        )
-        + Feature.export_long_img(
-            img_dir=str(job_dir),
-            filename_rule="Aid",
-            delete_original_file=True,
-        )
+    # 仅导出 PDF；长图由本脚本自行拼接
+    extra = Feature.export_pdf(
+        pdf_dir=str(job_dir),
+        filename_rule="Aid",
+        delete_original_file=True,
     )
 
     try:
@@ -172,16 +268,10 @@ def main() -> None:
         sys.stdout = _REAL_STDOUT
 
     pdf_path = find_first_file(job_dir, ".pdf")
-    long_img_path = find_first_file(job_dir, ".png")
-    long_img_paths = (
-        compress_long_img_for_download(long_img_path, job_dir) if long_img_path else []
-    )
+    longimg_path = build_longimg_from_pages(option_path, option, album_id, job_dir)
 
-    if not pdf_path and not long_img_paths:
-        emit_error(
-            "导出文件不完整，"
-            f"pdf={'有' if pdf_path else '无'}, longImg={'有' if long_img_paths else '无'}"
-        )
+    if not pdf_path and not longimg_path:
+        emit_error("导出文件不完整")
 
     print(
         json.dumps(
@@ -191,8 +281,8 @@ def main() -> None:
                 "title": title,
                 "pageCount": page_count,
                 "pdf": pdf_path,
-                "longImg": long_img_paths[0] if long_img_paths else None,
-                "longImgs": long_img_paths,
+                "longImg": longimg_path,
+                "longImgs": [longimg_path],
             },
             ensure_ascii=False,
         ),

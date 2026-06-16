@@ -144,11 +144,9 @@ export const config = {
     useBuiltinDownloadServer: process.env.JM_USE_BUILTIN_DOWNLOAD_SERVER === 'true',
     /** 内置 HTTP 下载服务端口（仅 useBuiltinDownloadServer=true 时生效） */
     downloadPort: Number(process.env.JM_DOWNLOAD_PORT ?? '8080'),
-    /** 长图切条高度（像素），越小单张越清晰、张数越多 */
-    longImgStripHeight: Number(process.env.JM_LONGIMG_STRIP_HEIGHT ?? '8000'),
+    /** 单张长图最大字节数，默认 50MB（整图不切分） */
+    longImgMaxBytes: Number(process.env.JM_LONGIMG_MAX_BYTES ?? String(50 * 1024 * 1024)),
     /** 长图 JPEG 起始质量（1-100） */
-    longImgJpegQuality: Number(process.env.JM_LONGIMG_JPEG_QUALITY ?? '92'),
-    /** 单张长图最大字节数，默认 9MB */
-    longImgMaxBytes: Number(process.env.JM_LONGIMG_MAX_BYTES ?? String(9 * 1024 * 1024)),
+    longImgJpegQuality: Number(process.env.JM_LONGIMG_JPEG_QUALITY ?? '90'),
   },
 }

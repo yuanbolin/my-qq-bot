@@ -28,8 +28,8 @@ function buildHelpText(): string {
     '  /jm帮助 — 显示本说明',
     '',
     '回复方式：',
-    '  下载完成后返回 HTTP 下载链接（长图按高度分片，保持原始宽度）',
-    `  长图 JPEG 起始质量 ${config.jm.longImgJpegQuality}，单条高度约 ${config.jm.longImgStripHeight}px`,
+    '  下载分张后自动拼接为一张长图，返回单个下载链接',
+    `  长图 JPEG 质量 ${config.jm.longImgJpegQuality}，单文件上限约 ${Math.round(config.jm.longImgMaxBytes / 1024 / 1024)}MB`,
     '',
     `页数限制：单本最多 ${config.jm.maxPages} 页`,
     `冷却时间：${Math.round(config.jm.cooldownMs / 60_000)} 分钟`,
@@ -45,13 +45,8 @@ function buildDownloadReply(caption: string, links: JmDownloadLinks): string {
   const ttlHours = Math.round(config.jm.cacheTtlMs / 3_600_000)
   const lines = [caption, '']
 
-  if (links.longImgs.length === 1) {
+  if (links.longImgs.length >= 1) {
     lines.push(`长图下载：${links.longImgs[0]}`)
-  } else if (links.longImgs.length > 1) {
-    lines.push(`长图下载（共 ${links.longImgs.length} 张，每张 ≤9MB）：`)
-    for (let i = 0; i < links.longImgs.length; i++) {
-      lines.push(`  ${i + 1}. ${links.longImgs[i]}`)
-    }
   }
 
   if (links.pdf) {
@@ -121,7 +116,7 @@ async function processJm(ctx: {
   try {
     await replyText(
       ctx.event,
-      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n完成后将压缩长图并返回下载链接。`,
+      `正在下载 JM${albumId}，请稍候（可能需数分钟）...\n完成后将拼接为一张长图并返回下载链接。`,
     )
 
     const result = await exportJmAlbum(albumId)
