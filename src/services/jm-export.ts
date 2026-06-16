@@ -155,6 +155,7 @@ function runPython(args: string[], timeoutMs: number): Promise<RunPythonResult> 
         ...process.env,
         JM_LONGIMG_JPEG_QUALITY: String(config.jm.longImgJpegQuality),
         JM_LONGIMG_MAX_BYTES: String(config.jm.longImgMaxBytes),
+        JM_LONGIMG_MAX_PIXELS: config.jm.longImgMaxPixels,
       },
     })
 

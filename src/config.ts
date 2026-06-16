@@ -148,5 +148,7 @@ export const config = {
     longImgMaxBytes: Number(process.env.JM_LONGIMG_MAX_BYTES ?? String(500 * 1024 * 1024)),
     /** 长图 JPEG 起始质量（1-100） */
     longImgJpegQuality: Number(process.env.JM_LONGIMG_JPEG_QUALITY ?? '90'),
+    /** Pillow 像素上限，none 表示不限制（服务端拼接长图） */
+    longImgMaxPixels: process.env.JM_LONGIMG_MAX_PIXELS?.trim() || 'none',
   },
 }
