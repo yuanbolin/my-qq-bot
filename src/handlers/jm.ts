@@ -29,6 +29,7 @@ function buildHelpText(): string {
     '',
     '回复方式：',
     '  下载分张后自动拼接为一张长图，返回单个下载链接',
+    '  超长本子自动改用 PNG（JPEG 单边上限 65500px）',
     `  长图 JPEG 质量 ${config.jm.longImgJpegQuality}，单文件上限约 ${Math.round(config.jm.longImgMaxBytes / 1024 / 1024)}MB`,
     '',
     `页数限制：单本最多 ${config.jm.maxPages} 页`,

@@ -88,8 +88,108 @@ def collect_album_page_images(base_dir: Path, album_id: str) -> list[Path]:
     return sorted(set(images), key=lambda p: (natural_sort_key(str(p.parent)), natural_sort_key(p.name)))
 
 
-def stitch_pages_to_longimg_jpeg(image_paths: list[Path], output_jpg: Path) -> str:
-    """逐页读取并竖向拼接，直接输出单张 JPEG（避免中间超大 PNG）。"""
+# JPEG 编码单边长度上限（超过则改用 PNG）
+JPEG_MAX_SIDE = 65500
+
+
+def _scaled_image(canvas, scale: float, resample):
+    if scale >= 0.999:
+        return canvas
+    w, h = canvas.size
+    return canvas.resize(
+        (max(1, int(w * scale)), max(1, int(h * scale))),
+        resample,
+    )
+
+
+def save_canvas_as_longimg(canvas, job_dir: Path, resample) -> str:
+    """保存拼接长图：尺寸在 JPEG 限制内优先 JPG，否则或失败时改用 PNG。"""
+    max_bytes = int(os.environ.get("JM_LONGIMG_MAX_BYTES", str(50 * 1024 * 1024)))
+    quality_start = int(os.environ.get("JM_LONGIMG_JPEG_QUALITY", "90"))
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    qualities: list[int] = []
+    q = quality_start
+    while q >= 55:
+        qualities.append(q)
+        q -= 5
+
+    scales = (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6)
+    cw, ch = canvas.size
+    prefer_png = cw > JPEG_MAX_SIDE or ch > JPEG_MAX_SIDE
+
+    if not prefer_png:
+        output_jpg = job_dir / "longimg.jpg"
+        for scale in scales:
+            target = _scaled_image(canvas, scale, resample)
+            tw, th = target.size
+            if tw > JPEG_MAX_SIDE or th > JPEG_MAX_SIDE:
+                if target is not canvas:
+                    target.close()
+                prefer_png = True
+                break
+            for quality in qualities:
+                try:
+                    # 超大图禁用 optimize，避免 broken data stream
+                    target.save(
+                        output_jpg,
+                        format="JPEG",
+                        quality=quality,
+                        optimize=False,
+                        progressive=False,
+                    )
+                    if output_jpg.stat().st_size <= max_bytes:
+                        if target is not canvas:
+                            target.close()
+                        return str(output_jpg)
+                except OSError as exc:
+                    sys.stderr.write(f"[jm] JPEG 保存失败，改用 PNG: {exc}\n")
+                    prefer_png = True
+                    break
+            if prefer_png:
+                if target is not canvas:
+                    target.close()
+                break
+            if target is not canvas:
+                target.close()
+
+    output_png = job_dir / "longimg.png"
+    last_error: Exception | None = None
+
+    for scale in scales:
+        target = _scaled_image(canvas, scale, resample)
+        for compress_level in (6, 7, 8, 9):
+            try:
+                target.save(
+                    output_png,
+                    format="PNG",
+                    compress_level=compress_level,
+                    optimize=True,
+                )
+                size = output_png.stat().st_size
+                if size <= max_bytes:
+                    if target is not canvas:
+                        target.close()
+                    return str(output_png)
+                last_error = None
+            except OSError as exc:
+                last_error = exc
+                sys.stderr.write(f"[jm] PNG 保存失败 (scale={scale}): {exc}\n")
+        if target is not canvas:
+            target.close()
+
+    # 仍超限则返回体积最小的 PNG（优先保证可下载）
+    if output_png.exists():
+        sys.stderr.write(
+            f"[jm] 长图 PNG 超过 {max_bytes // (1024 * 1024)}MB，仍输出原文件\n",
+        )
+        return str(output_png)
+
+    emit_error(f"保存长图失败: {last_error or '未知错误'}")
+
+
+def stitch_pages_to_longimg(image_paths: list[Path], job_dir: Path) -> str:
+    """逐页读取并竖向拼接，输出单张 longimg（JPG 或 PNG）。"""
     configure_pillow()
     from PIL import Image
 
@@ -97,8 +197,6 @@ def stitch_pages_to_longimg_jpeg(image_paths: list[Path], output_jpg: Path) -> s
         emit_error("未找到可拼接的分张图片")
 
     resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-    max_bytes = int(os.environ.get("JM_LONGIMG_MAX_BYTES", str(50 * 1024 * 1024)))
-    quality_start = int(os.environ.get("JM_LONGIMG_JPEG_QUALITY", "90"))
 
     # 第一遍：计算统一宽度与总高度
     target_width = 0
@@ -140,31 +238,10 @@ def stitch_pages_to_longimg_jpeg(image_paths: list[Path], output_jpg: Path) -> s
             y += page.height
             page.close()
 
-    output_jpg.parent.mkdir(parents=True, exist_ok=True)
-
-    qualities: list[int] = []
-    q = quality_start
-    while q >= 55:
-        qualities.append(q)
-        q -= 5
-
-    for scale in (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6):
-        w, h = canvas.size
-        target = canvas if scale >= 0.999 else canvas.resize(
-            (max(1, int(w * scale)), max(1, int(h * scale))),
-            resample,
-        )
-        for quality in qualities:
-            target.save(output_jpg, format="JPEG", quality=quality, optimize=True)
-            if output_jpg.stat().st_size <= max_bytes:
-                canvas.close()
-                return str(output_jpg)
-
-    canvas.close()
-    emit_error(
-        f"长图压缩后仍超过 {max_bytes // (1024 * 1024)}MB，"
-        "请调高 JM_LONGIMG_MAX_BYTES 或降低 JM_MAX_PAGES"
-    )
+    try:
+        return save_canvas_as_longimg(canvas, job_dir, resample)
+    finally:
+        canvas.close()
 
 
 def finalize_single_longimg(source_path: Path, job_dir: Path) -> str:
@@ -244,14 +321,13 @@ def build_longimg_from_pages(
     if not page_images:
         emit_error(f"下载完成但未在 {base_dir} 找到本子 {album_id} 的分张图片")
 
-    output_jpg = job_dir / "longimg.jpg"
-    longimg_path = stitch_pages_to_longimg_jpeg(page_images, output_jpg)
+    longimg_path = stitch_pages_to_longimg(page_images, job_dir)
 
     delete_files(page_images)
     cleanup_empty_dirs(base_dir)
 
-    for leftover in job_dir.glob("longimg-*.jpg"):
-        if leftover.name != "longimg.jpg":
+    for leftover in job_dir.glob("longimg-*.*"):
+        if leftover.name not in ("longimg.jpg", "longimg.png"):
             leftover.unlink(missing_ok=True)
 
     return longimg_path
