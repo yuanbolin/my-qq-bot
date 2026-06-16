@@ -10,15 +10,7 @@ export interface JmDownloadLinks {
   expiresAt: number
 }
 
-function cacheFilename(sourcePath: string, index: number, total: number): string {
-  const ext = path.extname(sourcePath).toLowerCase() || '.jpg'
-  if (total === 1) {
-    return `longimg${ext}`
-  }
-  return `longimg-${index + 1}${ext}`
-}
-
-/** 将导出文件复制到缓存目录并生成下载链接 */
+/** 将导出文件复制到 nginx 可访问的缓存目录并生成公网链接 */
 export async function publishJmDownloads(
   result: JmExportResult,
 ): Promise<JmDownloadLinks> {
@@ -26,22 +18,22 @@ export async function publishJmDownloads(
   const cacheDir = path.join(config.jm.cacheDir, token)
   await fs.mkdir(cacheDir, { recursive: true })
 
-  const baseUrl = config.jm.downloadBaseUrl.replace(/\/$/, '')
+  const baseUrl = config.jm.publicBaseUrl
   const links: JmDownloadLinks = {
     longImgs: [],
     expiresAt: Date.now() + config.jm.cacheTtlMs,
   }
 
-  const total = result.longImgPaths.length
-  for (let i = 0; i < total; i++) {
-    const filename = cacheFilename(result.longImgPaths[i], i, total)
-    await fs.copyFile(result.longImgPaths[i], path.join(cacheDir, filename))
-    links.longImgs.push(`${baseUrl}/jm/${token}/${filename}`)
+  for (const sourcePath of result.longImgPaths) {
+    const filename = path.basename(sourcePath)
+    await fs.copyFile(sourcePath, path.join(cacheDir, filename))
+    links.longImgs.push(`${baseUrl}/${token}/${filename}`)
   }
 
   if (result.pdfPath) {
-    await fs.copyFile(result.pdfPath, path.join(cacheDir, 'album.pdf'))
-    links.pdf = `${baseUrl}/jm/${token}/album.pdf`
+    const pdfName = 'album.pdf'
+    await fs.copyFile(result.pdfPath, path.join(cacheDir, pdfName))
+    links.pdf = `${baseUrl}/${token}/${pdfName}`
   }
 
   return links

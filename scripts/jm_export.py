@@ -6,6 +6,7 @@ JM 本子导出脚本，供 Node bot 子进程调用。
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -39,61 +40,79 @@ def find_first_file(directory: Path, suffix: str) -> str | None:
 
 
 def compress_long_img_for_download(png_path: str, job_dir: Path) -> list[str]:
-    """将 PNG 长图压缩为 JPEG（单张 ≤9MB），必要时按高度切分。"""
-    max_bytes = 9 * 1024 * 1024
-    max_height = 30_000
+    """按高度切分长图后逐片压缩，优先保持原始宽度与较高 JPEG 质量。"""
+    max_bytes = int(os.environ.get("JM_LONGIMG_MAX_BYTES", str(9 * 1024 * 1024)))
+    strip_height = int(os.environ.get("JM_LONGIMG_STRIP_HEIGHT", "8000"))
+    jpeg_quality_start = int(os.environ.get("JM_LONGIMG_JPEG_QUALITY", "92"))
 
     try:
         from PIL import Image
     except ImportError:
         return [png_path]
 
+    resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
     img = Image.open(png_path).convert("RGB")
     width, height = img.size
 
-    if width > 1600:
-        scale = 1600 / width
-        resample = getattr(Image, "Resampling", Image).LANCZOS
-        img = img.resize((1600, max(1, int(height * scale))), resample)
-        width, height = img.size
+    # 先按固定高度切成互不重叠的条带，避免旧逻辑出现重复片段
+    strips: list = []
+    y = 0
+    while y < height:
+        h = min(strip_height, height - y)
+        strips.append(img.crop((0, y, width, y + h)).copy())
+        y += h
 
-    pending: list = [img]
     result_paths: list[str] = []
-    part_index = 0
 
-    while pending:
-        region = pending.pop(0)
-        w, h = region.size
-
-        if h > max_height:
-            mid = h // 2
-            pending.insert(0, region.crop((0, mid, w, h)))
-            pending.insert(0, region.crop((0, 0, w, mid)))
-            continue
-
-        part_index += 1
-        part_path = job_dir / f"longimg-{part_index}.jpg"
-        saved = False
-
-        for quality in (85, 75, 65, 55, 45, 35, 25):
-            region.save(part_path, format="JPEG", quality=quality, optimize=True)
-            if part_path.stat().st_size <= max_bytes:
-                result_paths.append(str(part_path))
-                saved = True
-                break
-
-        if saved:
-            continue
-
-        if h <= 200:
-            emit_error("长图过大，压缩至 9MB 以内失败")
-
-        mid = h // 2
-        pending.insert(0, region.crop((0, mid, w, h)))
-        pending.insert(0, region.crop((0, 0, w, mid)))
-        part_index -= 1
+    for index, strip in enumerate(strips, start=1):
+        part_path = job_dir / f"longimg-{index}.jpg"
+        if _save_strip_jpeg(strip, part_path, max_bytes, jpeg_quality_start, resample):
+            result_paths.append(str(part_path))
+        else:
+            emit_error(f"长图第 {index}/{len(strips)} 片压缩至 9MB 以内失败，请调小 JM_LONGIMG_STRIP_HEIGHT")
 
     return result_paths
+
+
+def _save_strip_jpeg(strip, dest: Path, max_bytes: int, quality_start: int, resample) -> bool:
+    """保存单条带 JPEG，必要时降低质量或小幅缩小尺寸。"""
+    from PIL import Image
+
+    qualities = []
+    q = quality_start
+    while q >= 60:
+        qualities.append(q)
+        q -= 5
+
+    for scale in (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7):
+        w, h = strip.size
+        target = strip if scale >= 0.999 else strip.resize(
+            (max(1, int(w * scale)), max(1, int(h * scale))),
+            resample,
+        )
+        for quality in qualities:
+            target.save(dest, format="JPEG", quality=quality, optimize=True)
+            if dest.stat().st_size <= max_bytes:
+                return True
+
+    return False
+
+
+def resolve_page_count(album, client) -> int:
+    """album.page_count 有时为 0，回退为各章节页数之和。"""
+    page_count = int(getattr(album, "page_count", 0) or 0)
+    if page_count > 0:
+        return page_count
+
+    total = 0
+    for episode in getattr(album, "episode_list", []) or []:
+        photo_id = episode[0]
+        try:
+            photo = client.get_photo_detail(photo_id)
+            total += len(photo)
+        except Exception:
+            continue
+    return total
 
 
 def main() -> None:
@@ -124,7 +143,7 @@ def main() -> None:
     except Exception as exc:
         emit_error(f"查询本子失败: {exc}")
 
-    page_count = int(getattr(album, "page_count", 0) or 0)
+    page_count = resolve_page_count(album, client)
     title = str(getattr(album, "name", "") or getattr(album, "title", "") or "")
 
     if page_count > max_pages:

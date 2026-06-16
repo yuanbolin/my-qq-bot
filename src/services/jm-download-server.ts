@@ -61,8 +61,7 @@ export function startJmDownloadServer(): void {
   })
 
   server.listen(config.jm.downloadPort, '0.0.0.0', () => {
-    logger.info('JM 下载服务已启动', {
-      baseUrl: config.jm.downloadBaseUrl,
+    logger.info('JM 内置下载服务已启动', {
       port: config.jm.downloadPort,
       cacheDir: config.jm.cacheDir,
     })

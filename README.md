@@ -61,23 +61,30 @@ npm run pm2:logs
 
 ### JM 本子下载（`/jm`）
 
-基于 [JMComic-Crawler-Python](https://github.com/hect0x7/JMComic-Crawler-Python)，通过 Python 子进程下载并导出：
-
-| 场景 | 返回格式 |
-|------|----------|
-| 群聊 | 长图 PNG（QQ 群不支持发 PDF） |
-| 私聊 | PDF 文件 |
+基于 [JMComic-Crawler-Python](https://github.com/hect0x7/JMComic-Crawler-Python)，下载完成后返回 **nginx 公网链接**（长图 / PDF）。
 
 ```bash
-# 安装 Python 依赖（务必用 3.12 对应的 pip，不要用系统默认 python3.6）
-/usr/local/bin/python3.12 -m pip install jmcomic -U
-
-# 在 .env 中指定 Python 路径（CentOS 默认 python 常为 3.6）
-# JM_PYTHON_PATH=/usr/local/bin/python3.12
-
-# 检查环境
+/usr/local/bin/python3.12 -m pip install jmcomic pillow -U
 npm run check-jm
 ```
+
+`.env` 示例：
+
+```env
+JM_PUBLIC_BASE_URL=https://jtgy.gemstonecn.com/jm_img
+JM_CACHE_DIR=/data/projects/my-bot/my-qq-bot/data/jm/cache
+```
+
+nginx 配置（`server` 块内）：
+
+```nginx
+location /jm_img/ {
+    alias /data/projects/my-bot/my-qq-bot/data/jm/cache/;
+    autoindex off;
+}
+```
+
+链接格式：`https://jtgy.gemstonecn.com/jm_img/{token}/longimg-2.jpg`
 
 命令示例：`/jm 350234`、`/jm帮助`
 

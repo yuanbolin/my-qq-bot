@@ -151,6 +151,12 @@ function runPython(args: string[], timeoutMs: number): Promise<RunPythonResult> 
     const child = spawn(config.jm.pythonPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      env: {
+        ...process.env,
+        JM_LONGIMG_STRIP_HEIGHT: String(config.jm.longImgStripHeight),
+        JM_LONGIMG_JPEG_QUALITY: String(config.jm.longImgJpegQuality),
+        JM_LONGIMG_MAX_BYTES: String(config.jm.longImgMaxBytes),
+      },
     })
 
     let stdout = ''

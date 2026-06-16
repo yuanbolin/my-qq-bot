@@ -128,14 +128,27 @@ export const config = {
     maxPages: Number(process.env.JM_MAX_PAGES ?? '200'),
     /** 留空表示不限制；逗号分隔 openid */
     allowedUsers: parseUserIds(process.env.JM_ALLOWED_USERS),
-    /** 本机 HTTP 下载服务端口 */
-    downloadPort: Number(process.env.JM_DOWNLOAD_PORT ?? '8080'),
-    /** 对外下载链接前缀，如 http://47.113.17.22:8080 */
-    downloadBaseUrl: process.env.JM_DOWNLOAD_BASE_URL?.trim() || 'http://47.113.17.22:8080',
+    /** nginx 对外 URL 前缀，如 https://jtgy.gemstonecn.com/jm_img */
+    publicBaseUrl: (
+      process.env.JM_PUBLIC_BASE_URL
+      ?? process.env.JM_DOWNLOAD_BASE_URL
+      ?? 'https://jtgy.gemstonecn.com/jm_img'
+    ).trim().replace(/\/$/, ''),
+    /** 本机缓存目录，需与 nginx alias 指向同一目录 */
     cacheDir: process.env.JM_CACHE_DIR?.trim()
       ? path.resolve(process.env.JM_CACHE_DIR)
       : path.resolve('data/jm/cache'),
     /** 缓存有效期（毫秒），默认 24 小时 */
     cacheTtlMs: Number(process.env.JM_CACHE_TTL_MS ?? String(24 * 60 * 60 * 1000)),
+    /** 使用 nginx 静态映射时保持 false；仅无 nginx 时可设为 true */
+    useBuiltinDownloadServer: process.env.JM_USE_BUILTIN_DOWNLOAD_SERVER === 'true',
+    /** 内置 HTTP 下载服务端口（仅 useBuiltinDownloadServer=true 时生效） */
+    downloadPort: Number(process.env.JM_DOWNLOAD_PORT ?? '8080'),
+    /** 长图切条高度（像素），越小单张越清晰、张数越多 */
+    longImgStripHeight: Number(process.env.JM_LONGIMG_STRIP_HEIGHT ?? '8000'),
+    /** 长图 JPEG 起始质量（1-100） */
+    longImgJpegQuality: Number(process.env.JM_LONGIMG_JPEG_QUALITY ?? '92'),
+    /** 单张长图最大字节数，默认 9MB */
+    longImgMaxBytes: Number(process.env.JM_LONGIMG_MAX_BYTES ?? String(9 * 1024 * 1024)),
   },
 }

@@ -127,7 +127,14 @@ async function main() {
   logger.info('存储后端', { backend: getStorageBackend() })
 
   await ensureJmCacheDir()
-  startJmDownloadServer()
+  if (config.jm.useBuiltinDownloadServer) {
+    startJmDownloadServer()
+  } else {
+    logger.info('JM 文件由 nginx 静态映射提供', {
+      publicBaseUrl: config.jm.publicBaseUrl,
+      cacheDir: config.jm.cacheDir,
+    })
+  }
   await cleanupExpiredJmCache()
   setInterval(() => {
     cleanupExpiredJmCache().catch((error: unknown) => {
