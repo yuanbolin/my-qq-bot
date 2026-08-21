@@ -2,11 +2,18 @@ import type { Sendable } from 'qq-official-bot'
 
 type MessageElem = Extract<Sendable, object>
 
-/** 去掉 raw_message 中的 at/reply 等段标记，得到可读文本 */
+/** 去掉 raw_message 中的 at/reply/图片等段标记，得到可读文本 */
 export function extractPlainText(rawMessage: string): string {
   return rawMessage
     .replace(/<at,[^>]*>/gi, '')
     .replace(/<reply,[^>]*>/gi, '')
+    // QQ 官方协议富媒体段：属性可能很长，用非贪婪匹配到结束 >
+    .replace(/<image,[^>]*>/gi, '')
+    .replace(/<video,[^>]*>/gi, '')
+    .replace(/<audio,[^>]*>/gi, '')
+    .replace(/<face,[^>]*>/gi, '')
+    .replace(/<file,[^>]*>/gi, '')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 

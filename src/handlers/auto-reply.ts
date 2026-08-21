@@ -10,6 +10,7 @@ import {
 import { downloadImageToAssets } from '../utils/download-image.js'
 import {
   extractImageUrls,
+  extractPlainText,
   matchCommand,
   parseCommandArgs,
   stripSlashPrefix,
@@ -19,6 +20,11 @@ import { replyImage, replyText, replyTextImage } from '../utils/reply.js'
 type MessageEvent = Parameters<typeof replyText>[0]
 
 const ADMIN_COMMANDS = new Set(['应答设置', '应答删除', '应答列表', '应答帮助'])
+
+/** 二次清理，防止参数里残留协议段标记 */
+function stripMediaTags(text: string): string {
+  return extractPlainText(text)
+}
 
 function buildHelpText(): string {
   const mode =
@@ -56,15 +62,16 @@ async function replyRule(
   text: string,
   image?: string,
 ): Promise<void> {
-  if (image && text) {
-    await replyTextImage(event, text, image)
+  const cleanText = stripMediaTags(text)
+  if (image && cleanText) {
+    await replyTextImage(event, cleanText, image)
     return
   }
   if (image) {
     await replyImage(event, image)
     return
   }
-  await replyText(event, text || '（空回复）')
+  await replyText(event, cleanText || '（空回复）')
 }
 
 async function handleSet(
@@ -85,10 +92,10 @@ async function handleSet(
 
   if (pipe >= 0) {
     keyword = args.slice(0, pipe).trim()
-    text = args.slice(pipe + 1).trim()
+    text = stripMediaTags(args.slice(pipe + 1)).trim()
   } else {
     // 允许「应答设置 关键词」+ 纯图
-    keyword = args.trim()
+    keyword = stripMediaTags(args).trim()
     text = ''
   }
 
