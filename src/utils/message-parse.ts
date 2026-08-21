@@ -76,6 +76,35 @@ export function isAtUser(message: Sendable, userId: string): boolean {
   return extractAtUserIds(message).includes(userId)
 }
 
+/** 从消息段中提取图片 URL（接收消息的 file / url 字段） */
+export function extractImageUrls(message: Sendable): string[] {
+  const items = normalizeMessage(message)
+  const urls: string[] = []
+
+  for (const item of items) {
+    if (typeof item === 'string') continue
+    if (item.type !== 'image') continue
+
+    const data = item.data as { file?: string | Buffer; url?: string }
+    const candidates = [data.url, typeof data.file === 'string' ? data.file : undefined]
+    for (const candidate of candidates) {
+      if (!candidate) continue
+      if (
+        candidate.startsWith('http://')
+        || candidate.startsWith('https://')
+        || candidate.startsWith('//')
+      ) {
+        const normalized = candidate.startsWith('//') ? `https:${candidate}` : candidate
+        if (!urls.includes(normalized)) {
+          urls.push(normalized)
+        }
+      }
+    }
+  }
+
+  return urls
+}
+
 function normalizeMessage(message: Sendable): MessageElem[] {
   if (Array.isArray(message)) {
     return message.filter((item): item is MessageElem => typeof item !== 'string')

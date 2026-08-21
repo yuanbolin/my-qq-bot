@@ -4,4 +4,5 @@ logs/
 *.log
 .env
 assets/sorry/cache/
+assets/auto-reply/
 data/jm/

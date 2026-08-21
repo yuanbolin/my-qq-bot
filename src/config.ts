@@ -151,4 +151,8 @@ export const config = {
     /** Pillow 像素上限，none 表示不限制（服务端拼接长图） */
     longImgMaxPixels: process.env.JM_LONGIMG_MAX_PIXELS?.trim() || 'none',
   },
+  /** 自定义关键词应答：空 admins = 全员可设置/删除 */
+  autoReply: {
+    admins: parseUserIds(process.env.AUTO_REPLY_ADMINS),
+  },
 }

@@ -6,6 +6,7 @@ import { oickFunPrivateHandle } from './oick-fun.js'
 import { sixtyApiPrivateHandle } from './sixty-api.js'
 import { sorryPrivateHandle } from './sorry.js'
 import { jmPrivateHandle } from './jm.js'
+import { autoReplyPrivateHandle } from './auto-reply.js'
 
 function handleBasicCommand(text: string): string | null {
   const content = text.trim()
@@ -38,6 +39,10 @@ function handleBasicCommand(text: string): string | null {
       '/sorry帮助 - 表情包命令说明',
       '/jm <车号> - 下载本子（群聊长图，私聊 PDF）',
       '/jm帮助 - JM 命令说明',
+      '/应答设置 关键词 | 文本 - 设置关键词应答（可附图）',
+      '/应答删除 关键词 - 删除应答规则',
+      '/应答列表 - 查看应答规则',
+      '/应答帮助 - 应答命令说明',
     ].join('\n')
   }
 
@@ -54,6 +59,7 @@ const handlers = [
   { name: 'meme', handle: memePrivateHandle },
   { name: 'sorry', handle: sorryPrivateHandle },
   { name: 'jm', handle: jmPrivateHandle },
+  { name: 'auto-reply', handle: autoReplyPrivateHandle },
 ]
 
 export async function handlePrivateMessage(ctx: PrivateContext): Promise<boolean> {
